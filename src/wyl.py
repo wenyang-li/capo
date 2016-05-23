@@ -13,8 +13,10 @@ def writetxt(npzfiles, repopath):
     outfile = open(outfn,'w')
     githash = subprocess.check_output(['git','rev-parse','HEAD'], cwd=repopath)
     today = datetime.date.today().strftime("Date: %d, %b %Y")
+    ori = subprocess.check_output(['git','remote','show','origin'], cwd=repopath)
+    ori = ori.split('\n')[1].split(' ')[-1]
     outfile.write("# %s\n"%today)
-    outfile.write("# Program of origin: https://github.com/wenyang-li/capo.git\n")
+    outfile.write("# Program of origin: %s\n"%ori)
     outfile.write("# Git Hash: %s"%githash)
     outfile.write("# Convention: Divide uncalibrated data by these gains to obtain calibrated data.\n")
     outfile.write("# ANT NAME, ANT INDEX, FREQ (MHZ), POL, TIME (JD), RE(GAIN), IM(GAIN), FLAG\n")
