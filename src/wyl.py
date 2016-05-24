@@ -108,7 +108,6 @@ def uv_read(filenames, filetype=None, polstr=None,antstr='cross',recast_as_array
             if ant1[ii] == ant2[ii]:
                 auto += 1
         nbl -= auto
-        print nbl
         
         nant = int((1+math.sqrt(1+8*nbl))/2)
         
@@ -116,7 +115,7 @@ def uv_read(filenames, filetype=None, polstr=None,antstr='cross',recast_as_array
             if ant1[ii] < 0: continue
             if ant1[ii] == ant2[ii] and antstr == 'cross': continue
             bl = (ant1[ii],ant2[ii])
-            if not (dat.has_key(bl)): dat[bl],flg[bl] = {},{}
+            if not dat.has_key(bl): dat[bl],flg[bl] = {},{}
             for jj in range(0,npol):
                 pp = aipy.miriad.pol2str[pol[jj]]
                 if not dat[bl].has_key(pp):
