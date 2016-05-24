@@ -98,17 +98,25 @@ def uv_read(filenames, filetype=None, polstr=None,antstr='cross',recast_as_array
         freqarr = uvdata.freq_array.value[0]
         auto = 0
         
+        dindex = ant1 - ant2
+        if 1 in dindex and -1 in dindex: #if both (i,j) and (j,i) are included, use -1 to flag (j,i) (if j>i)
+            for ii in range(0,blt):
+                if ant1[ii] > ant2[ii]:
+                    ant1[ii]=-1
+                    ant2[ii]=-1
         for ii in range(0, nbl):
             if ant1[ii] == ant2[ii]:
                 auto += 1
         nbl -= auto
+        print nbl
         
         nant = int((1+math.sqrt(1+8*nbl))/2)
         
         for ii in range(0,blt):
+            if ant1[ii] < 0: continue
             if ant1[ii] == ant2[ii] and antstr == 'cross': continue
             bl = (ant1[ii],ant2[ii])
-            if not dat.has_key(bl): dat[bl],flg[bl] = {},{}
+            if not (dat.has_key(bl)): dat[bl],flg[bl] = {},{}
             for jj in range(0,npol):
                 pp = aipy.miriad.pol2str[pol[jj]]
                 if not dat[bl].has_key(pp):
