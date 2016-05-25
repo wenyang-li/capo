@@ -52,9 +52,9 @@ times, data, flags = arp.get_dict_of_uv_data(args, bl_string, opts.pol, verbose=
 dataxx = {}
 for (i,j) in data.keys():
     dataxx[(i,j)] = data[(i,j)]['xx']
-fqs = n.linspace(.1,.2,1024)
+fqs = n.linspace(.1,.2,200)
 dlys = n.fft.fftshift(n.fft.fftfreq(fqs.size, fqs[1]-fqs[0]))
-
+import IPython; IPython.embed()
 #gets phase solutions per frequency.
 fc = omni.FirstCal(dataxx,fqs,info)
 #sols = fc.run(tune=True, verbose=True)
@@ -62,7 +62,7 @@ sols = fc.run(tune=True)
 #import IPython; IPython.embed()
 #save solutions
 fname = args[0]
-save_gains(sols,fqs,name=fname)
+save_gains(sols,fqs)
 
 
 if PLOT:

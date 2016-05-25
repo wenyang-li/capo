@@ -129,7 +129,7 @@ def aa_to_info(aa, pols=['x'], fcal=False, **kwargs):
 
 #generate info from real positions
 ####################################################################################################
-def aa_pos_to_info(aa, pols=['x'], **kwargs):
+def aa_pos_to_info(aa, pols=['x'], fcal=False, **kwargs):
     '''Use aa.ant_layout to generate redundances based on real placement.
         The remaining arguments are passed to omnical.arrayinfo.filter_reds()'''
     nant = len(aa)
@@ -153,7 +153,11 @@ def aa_pos_to_info(aa, pols=['x'], **kwargs):
     ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
     kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
     reds = filter_reds(reds, **kwargs)
-    info = RedundantInfo(nant)
+    if fcal:
+        info = FirstCalRedundantInfo(nant)
+    else:
+        info = RedundantInfo(nant)
+#info = RedundantInfo(nant)
     info.init_from_reds(reds,antpos)
     return info
 ####################################################################################################
