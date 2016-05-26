@@ -3,6 +3,7 @@
 import capo,aipy
 import numpy as n
 import sys,optparse
+import glob
 
 o = optparse.OptionParser()
 aipy.scripting.add_standard_options(o,cal=True,pol=True)
