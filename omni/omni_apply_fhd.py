@@ -62,16 +62,16 @@ for f,filename in enumerate(args):
             a2 = uvi.ant_2_array.value[ii]
             p1,p2 = p
             ti = ii/Nbls
-            for jj in range(0,Nfreqs):
-                if opts.xtalk:
-                    try: uvi.data_array.value[ii][0][jj][pid] -= xtalk[p][(a1,a2)][jj]
-                    except(KeyError):
-                        try: uvi.data_array.value[ii][0][jj][pid] -= xtalk[p][(a2,a1)][jj].conj()
-                        except(KeyError): pass
-                try: uvi.data_array.value[ii][0][jj][pid] /= gains[p1][a1][ti][jj]
-                except(KeyError): pass
-                try: uvi.data_array.value[ii][0][jj][pid] /= gains[p2][a2][ti][jj].conj()
-                except(KeyError): pass
+                #for jj in range(0,Nfreqs):
+            if opts.xtalk:
+                try: uvi.data_array.value[:,0][:,:,pid][ii] -= xtalk[p][(a1,a2)]
+                except(KeyError):
+                    try: uvi.data_array.value[:,0][:,:,pid][ii] -= xtalk[p][(a2,a1)].conj()
+                    except(KeyError): pass
+            try: uvi.data_array.value[:,0][:,:,pid][ii] /= gains[p1][a1][ti]
+            except(KeyError): pass
+            try: uvi.data_array.value[:,0][:,:,pid][ii] /= gains[p2][a2][ti].conj()
+            except(KeyError): pass
 
     #write file
     uvi.history.value = ''
