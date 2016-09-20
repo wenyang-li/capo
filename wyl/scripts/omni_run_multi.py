@@ -141,13 +141,8 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     freqs = infodict['freqs']
     timeinfo = infodict['timeinfo']
     calpar = infodict['calpar']
+    ex_ants = infodict['ex_ants']
     print 'Getting reds from calfile'
-    if opts.ba: #XXX assumes exclusion of the same antennas for every pol
-        ex_ants = []
-        for a in opts.ba.split(','):
-            ex_ants.append(int(a))
-        print '   Excluding antennas:',sorted(ex_ants)
-    else: ex_ants = []
     print 'generating info:'
     info = capo.omni.pos_to_info(pos, pols=list(set(''.join([polar]))), ex_ants=ex_ants, crosspols=[polar])
 
@@ -199,6 +194,22 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
 
 exec('from %s import antpos as _antpos'% opts.cal)
 for f,filename in enumerate(args):
+    
+    ex_ants = []
+    if opts.ba: #XXX assumes exclusion of the same antennas for every pol
+        for a in opts.ba.split(','):
+            ex_ants.append(int(a))
+    if opts.ftype == 'uvfits':
+        try:
+            hdu = fits.open(filename+'.metafits')
+            D = hdu[1].data
+            for ii in range(0,len(D)):
+                if D[ii][6]>0 and not D[ii][1] in ex_ants: ex_ants.append(D[ii][1])
+        except(KeyError):
+            print:"  Warning: Metafits missing. Cannot find flagged tile. Unless you specified flagged tile in opts.ba, this can potentially cause key error in later calibration."
+            pass
+    print '   Excluding antennas:',sorted(ex_ants)
+
     npzlist = []
     infodict = {}
     filegroup = files[filename]
@@ -221,6 +232,7 @@ for f,filename in enumerate(args):
             infodict[p]['g0'] = g0[p[0]]
         infodict[p]['calpar'] = opts.calpar
         infodict[p]['position'] = _antpos
+        infodict[p]['ex_ants'] = ex_ants
         info_dict.append(infodict[p])
     print "  Start Parallelism:"
     par = Pool(2)
