@@ -175,6 +175,7 @@ def pos_to_info(position, pols=['x'], fcal=False, **kwargs):
     reds = compute_reds(nant, pols, antpos[:nant],tol=0.01)
     ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
     kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
+    reds = filter_reds(reds, **kwargs)
     if fcal:
         info = FirstCalRedundantInfo(nant)
     else:
