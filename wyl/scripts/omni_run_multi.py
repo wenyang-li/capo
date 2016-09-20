@@ -148,6 +148,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             ex_ants.append(int(a))
         print '   Excluding antennas:',sorted(ex_ants)
     else: ex_ants = []
+    print 'generating info:'
     info = capo.omni.pos_to_info(pos, pols=list(set(''.join([polar]))), ex_ants=ex_ants, crosspols=[polar])
 
 ### Omnical-ing! Loop Through Compressed Files ###
@@ -202,6 +203,7 @@ for f,filename in enumerate(args):
     infodict = {}
     filegroup = files[filename]
     info_dict = []
+    print "  Reading data, which takes a while: " + filename
     if opts.ftype == 'miriad':
         for p in pols:
             dict0 = capo.wyl.uv_read_v2([filegroup[p]], filetype = 'miriad', antstr='cross')
@@ -211,6 +213,7 @@ for f,filename in enumerate(args):
         infodict = capo.wyl.uv_read_v2([filegroup[key] for key in filegroup.keys()], filetype=opts.ftype, antstr='cross')
         for p in pols:
             infodict[p]['filename'] = filename
+    print "  Finish reading."
     for p in pols:
         if opts.calpar == None:
             infodict[p]['g0'] = {}
@@ -219,6 +222,7 @@ for f,filename in enumerate(args):
         infodict[p]['calpar'] = opts.calpar
         infodict[p]['position'] = _antpos
         info_dict.append(infodict[p])
+    print "  Start Parallelism:"
     par = Pool(2)
     npzlist = par.map(calibration, info_dict)
     par.close()
