@@ -206,11 +206,11 @@ for f,filename in enumerate(args):
     print "  Reading data, which takes a while: " + filename
     if opts.ftype == 'miriad':
         for p in pols:
-            dict0 = capo.wyl.uv_read_v2([filegroup[p]], filetype = 'miriad', antstr='cross')
+            dict0 = capo.wyl.uv_read_v2([filegroup[p]], filetype = 'miriad', antstr='cross',p_list=[p])
             infodict[p] = dict0[p]
             infodict[p]['filename'] = filegroup[p]
     else:
-        infodict = capo.wyl.uv_read_v2([filegroup[key] for key in filegroup.keys()], filetype=opts.ftype, antstr='cross')
+        infodict = capo.wyl.uv_read_v2([filegroup[key] for key in filegroup.keys()], filetype=opts.ftype, antstr='cross', p_list=pols)
         for p in pols:
             infodict[p]['filename'] = filename
     print "  Finish reading."

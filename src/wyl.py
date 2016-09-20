@@ -226,7 +226,7 @@ def uv_read(filenames, filetype=None, polstr=None,antstr='cross',recast_as_array
         ginfo[2] = nfreq
     return info, dat, flg, ginfo, freqarr
 
-def uv_read_v2(filenames, filetype=None, antstr='cross'):
+def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy']):
     info = {'lsts':[], 'times':[]}
     dat, flg = {},{}
     ginfo = [0,0,0]
@@ -250,7 +250,7 @@ def uv_read_v2(filenames, filetype=None, antstr='cross'):
         nbl = uvdata.Nbls
         nfreq = uvdata.Nfreqs
         
-        uvdata.set_lsts_from_time_array()
+        #uvdata.set_lsts_from_time_array() to save some time for now
         info['times'] = uvdata.time_array[::nbl]
         info['lsts'] = uvdata.lst_array[::nbl]
         pol = uvdata.polarization_array
@@ -285,11 +285,13 @@ def uv_read_v2(filenames, filetype=None, antstr='cross'):
         flgcut = []
 
         for jj in range(0,npol):
+            if not aipy.miriad.pol2str[pol[jj]] in p_list: continue
             datcut.append(data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs))
             flgcut.append(flag[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs))
 
         for jj in range(0,npol):
             pp = aipy.miriad.pol2str[pol[jj]]
+            if not pp in p_list: continue
             infodict[pp] = {}
             for ii in range(0,uvdata.Nbls):
                 if ant1[ii] < 0: continue
