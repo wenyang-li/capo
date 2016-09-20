@@ -205,8 +205,8 @@ for f,filename in enumerate(args):
             D = hdu[1].data
             for ii in range(0,len(D)):
                 if D[ii][6]>0 and not D[ii][1] in ex_ants: ex_ants.append(D[ii][1])
-        except(KeyError):
-            print:"  Warning: Metafits missing. Cannot find flagged tile. Unless you specified flagged tile in opts.ba, this can potentially cause key error in later calibration."
+        except:
+            print "  Warning: Metafits missing. Cannot find flagged tile. Unless you specified flagged tile with --ba, this can potentially cause key error in later calibration."
             pass
     print '   Excluding antennas:',sorted(ex_ants)
 
