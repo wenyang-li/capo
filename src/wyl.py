@@ -3,7 +3,7 @@ import uvdata.uvdata as uvd
 import subprocess, datetime, os
 from astropy.io import fits
 
-def writefits(npzfiles, repopath, ex_ants):
+def writefits(npzfiles, repopath, ex_ants, name_dict):
     
     p2pol = {'EE': 'x','NN': 'y','EN': 'cross', 'NE': 'cross'}
 
@@ -43,7 +43,8 @@ def writefits(npzfiles, repopath, ex_ants):
     na = len(tot)
     nam = []
     for nn in range(0,na):
-        nam.append('ant'+str(tot[nn]))      #keep this for now, may change in the future
+        try: nam.append(str(name_dict[tot[nn]]))
+        except(KeyError): nam.append('ant'+str(tot[nn]))      #keep this for now, may change in the future
     datarray = []
     flgarray = []
     for ii in range(0,4):
@@ -89,7 +90,7 @@ def writefits(npzfiles, repopath, ex_ants):
     hdulist.writeto(outfn)
 
 
-def writetxt(npzfiles, repopath, ex_ants):
+def writetxt(npzfiles, repopath, ex_ants, name_dict):
     
     p2pol = {'EE': 'x','NN': 'y','EN': 'cross', 'NE': 'cross'}  #check the convension
     
@@ -146,7 +147,9 @@ def writetxt(npzfiles, repopath, ex_ants):
                     stkey = str(aa) + p2pol[pol[pp]]
                     try: da = datadict[stkey][tt][ff]
                     except(KeyError): da = 1.0
-                    outfile.write("ant%d, %d, %f, %s, %.8f, %.8f, %.8f, %d\n"%(aa,aa,df,dp,dt,da.real,da.imag,dfl))
+                    try: antstr = str(name_dict[aa])
+                    except(KeyError): antstr = 'ant'+str(aa)
+                    outfile.write("%s, %d, %f, %s, %.8f, %.8f, %.8f, %d\n"%(antstr,aa,df,dp,dt,da.real,da.imag,dfl))
     outfile.close()
 
 def uv_read(filenames, filetype=None, polstr=None,antstr='cross',recast_as_array=True):

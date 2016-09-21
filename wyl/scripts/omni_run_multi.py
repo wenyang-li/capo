@@ -194,7 +194,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
 
 exec('from %s import antpos as _antpos'% opts.cal)
 for f,filename in enumerate(args):
-    
+    name_dict = {}  #for writing to fits or txt if provided    
     ex_ants = []
     if opts.ba: #XXX assumes exclusion of the same antennas for every pol
         for a in opts.ba.split(','):
@@ -205,6 +205,7 @@ for f,filename in enumerate(args):
             D = hdu[1].data
             for ii in range(0,len(D)):
                 if D[ii][6]>0 and not D[ii][1] in ex_ants: ex_ants.append(D[ii][1])
+                if not name_dict.has_key(D[ii][1]): name_dict[D[ii][1]] = D[ii][2] 
         except:
             print "  Warning: Metafits missing. Cannot find flagged tile. Unless you specified flagged tile with --ba, this can potentially cause key error in later calibration."
             pass
@@ -244,7 +245,7 @@ for f,filename in enumerate(args):
         pathlist = os.path.split(scrpath)[0].split('/')
         repopath = '/'.join(pathlist[0:-1])+'/'
         print '   Writing to txt:'
-        capo.wyl.writetxt(npzlist, repopath, ex_ants)
+        capo.wyl.writetxt(npzlist, repopath, ex_ants, name_dict)
         print '   Finish'
 
     if opts.iffits: #if True, write npz gains to fits files
@@ -252,7 +253,7 @@ for f,filename in enumerate(args):
         pathlist = os.path.split(scrpath)[0].split('/')
         repopath = '/'.join(pathlist[0:-1])+'/'
         print '   Writing to fits:'
-        capo.wyl.writefits(npzlist, repopath, ex_ants)
+        capo.wyl.writefits(npzlist, repopath, ex_ants, name_dict)
         print '   Finish'
 
 
