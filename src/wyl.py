@@ -8,11 +8,11 @@ def writefits(npzfiles, repopath, ex_ants):
     p2pol = {'EE': 'x','NN': 'y','EN': 'cross', 'NE': 'cross'}
 
     fn0 = npzfiles[0].split('.')
-    if len(npzfiles) == 1:
-        fn0[-1] = 'fits'
-        outfn = '.'.join(fn0)
-    else:
-        outfn = fn0[0]+'.fits'
+    if len(npzfiles) > 1: fn0[-2] = 'O'
+    else: fn0[-2] += 'O'
+    fn0[-1] = 'fits'
+    outfn = '.'.join(fn0)
+    print outfn
     if os.path.exists(outfn):
         print '   %s exists, skipping...' % outfn
         return 0
