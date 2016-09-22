@@ -91,7 +91,7 @@ def writefits(npzfiles, repopath, ex_ants=[], name_dict={}):
     hdulist.writeto(outfn)
 
 
-def writetxt(npzfiles, repopath, ex_ants, name_dict):
+def writetxt(npzfiles, repopath, ex_ants=[], name_dict={}):
     
     p2pol = {'EE': 'x','NN': 'y','EN': 'cross', 'NE': 'cross'}  #check the convension
     
@@ -127,7 +127,8 @@ def writetxt(npzfiles, repopath, ex_ants, name_dict):
                 if not intss in ant:
                     ant.append(intss)
     ant.sort()
-    tot = ant + ex_ants
+    if name_dict == {}: tot = ant + ex_ants
+    else: tot = name_dict.keys()
     tot.sort()
     time = data['jds']
     freq = data['freqs']/1e6
@@ -148,7 +149,7 @@ def writetxt(npzfiles, repopath, ex_ants, name_dict):
                     stkey = str(aa) + p2pol[pol[pp]]
                     try: da = datadict[stkey][tt][ff]
                     except(KeyError): da = 1.0
-                    try: antstr = str(name_dict[aa])
+                    try: antstr = name_dict[aa]
                     except(KeyError): antstr = 'ant'+str(aa)
                     outfile.write("%s, %d, %f, %s, %.8f, %.8f, %.8f, %d\n"%(antstr,aa,df,dp,dt,da.real,da.imag,dfl))
     outfile.close()
