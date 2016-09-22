@@ -3,7 +3,7 @@ import uvdata.uvdata as uvd
 import subprocess, datetime, os
 from astropy.io import fits
 
-def writefits(npzfiles, repopath, ex_ants, name_dict):
+def writefits(npzfiles, repopath, ex_ants=[], name_dict={}):
     
     p2pol = {'EE': 'x','NN': 'y','EN': 'cross', 'NE': 'cross'}
 
@@ -33,7 +33,8 @@ def writefits(npzfiles, repopath, ex_ants, name_dict):
                 if not intss in ant:
                     ant.append(intss)
     ant.sort()
-    tot = ant + ex_ants
+    if name_dict == {}: tot = ant + ex_ants
+    else: tot = name_dict.keys()
     tot.sort()
     time = data['jds']
     freq = data['freqs']/1e6
@@ -43,8 +44,8 @@ def writefits(npzfiles, repopath, ex_ants, name_dict):
     na = len(tot)
     nam = []
     for nn in range(0,na):
-        try: nam.append(str(name_dict[tot[nn]]))
-        except(KeyError): nam.append('ant'+str(tot[nn]))      #keep this for now, may change in the future
+        try: nam.append(name_dict[tot[nn]])
+        except(KeyError): nam.append('ant'+str(tot[nn]))
     datarray = []
     flgarray = []
     for ii in range(0,4):
@@ -53,8 +54,8 @@ def writefits(npzfiles, repopath, ex_ants, name_dict):
         for jj in range(0,na):
             try: dd.append(datadict[str(tot[jj])+p2pol[pol[ii]]])
             except(KeyError): dd.append(np.ones((nt,nf)))
-            if tot[jj] in ex_ants: fl.append(np.ones((nt,nf),dtype=int))
-            else: fl.append(np.zeros((nt,nf),dtype=int))
+            if tot[jj] in ex_ants: fl.append(np.ones((nt,nf),dtype=bool))
+            else: fl.append(np.zeros((nt,nf),dtype=bool))
         datarray.append(dd)
         flgarray.append(fl)
     datarray = np.array(datarray)
@@ -316,6 +317,10 @@ def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy']):
             infodict[pp]['ginfo'] = ginfo
             infodict[pp]['freqs'] = freqarr
             infodict[pp]['pol'] = pp
+        infodict['name_dict'] = {}
+        for ii in range(0,uvdata.Nants_telescope):
+            if not infodict['name_dict'].has_key(uvdata.antenna_numbers[ii]):
+                infodict['name_dict'][uvdata.antenna_numbers[ii]] = uvdata.antenna_names[ii]
     return infodict
 
 
