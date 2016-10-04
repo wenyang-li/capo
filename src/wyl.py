@@ -159,16 +159,15 @@ def uv_read(filenames, filetype=None, polstr=None,antstr='cross',recast_as_array
     dat, flg = {},{}
     ginfo = [0,0,0]
     freqarr = []
-    #    uvdata=uvd.UVData()
     if type(filenames) == str: filenames = [filenames]
     for filename in filenames:
         uvdata = uvd.UVData()
         if filetype == 'miriad':
-            uvdata.read_miriad(filename)
+            uvdata.read_miriad(filename, run_check=False, run_sanity_check=False)
         elif filetype == 'uvfits':
-            uvdata.read_uvfits(filename)
+            uvdata.read_uvfits(filename, run_check=False, run_sanity_check=False)
         elif filetype == 'fhd':                #in this case filename should be a list of files
-            uvdata.read_fhd(filename)
+            uvdata.read_fhd(filename, use_model=False, run_check=False, run_sanity_check=False)
         else:
             raise IOError('invalid filetype, it should be miriad, uvfits, or fhd')
         tt = uvdata.time_array
@@ -177,7 +176,6 @@ def uv_read(filenames, filetype=None, polstr=None,antstr='cross',recast_as_array
         nbl = uvdata.Nbls
         nfreq = uvdata.Nfreqs
 
-        uvdata.set_lsts_from_time_array()
         info['times'] = uvdata.time_array[::nbl]
         info['lsts'] = uvdata.lst_array[::nbl]
         pol = uvdata.polarization_array
@@ -244,11 +242,11 @@ def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy']):
     for filename in filenames:
         uvdata = uvd.UVData()
         if filetype == 'miriad':
-            uvdata.read_miriad(filename)
+            uvdata.read_miriad(filename, run_check=False, run_sanity_check=False)
         elif filetype == 'uvfits':
-            uvdata.read_uvfits(filename)
+            uvdata.read_uvfits(filename, run_check=False, run_sanity_check=False)
         elif filetype == 'fhd':                #in this case filename should be a list of files
-            uvdata.read_fhd(filename)
+            uvdata.read_fhd(filename, use_model=False, run_check=False, run_sanity_check=False)
         else:
             raise IOError('invalid filetype, it should be miriad, uvfits, or fhd')
         tt = uvdata.time_array
@@ -257,7 +255,6 @@ def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy']):
         nbl = uvdata.Nbls
         nfreq = uvdata.Nfreqs
         
-        #uvdata.set_lsts_from_time_array() to save some time for now
         info['times'] = uvdata.time_array[::nbl]
         info['lsts'] = uvdata.lst_array[::nbl]
         pol = uvdata.polarization_array
