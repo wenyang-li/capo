@@ -290,17 +290,18 @@ def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], o
         
         freqarr = uvdata.freq_array[0]
         auto = 0
-        
+        exconj = 0
         dindex = ant1 - ant2
+        for ii in range(0, nbl):
+            if ant1[ii] == ant2[ii]:
+                auto += 1
         if 1 in dindex and -1 in dindex: #if both (i,j) and (j,i) are included, use -1 to flag (j,i) (if j>i)
             for ii in range(0,nbl):
                 if ant1[ii] > ant2[ii]:
                     ant1[ii]=-1
                     ant2[ii]=-1
-        for ii in range(0, nbl):
-            if ant1[ii] == ant2[ii]:
-                auto += 1
-        nbl -= auto
+                    exconj += 1
+        nbl -= (auto + exconj)
         nant = int((1+math.sqrt(1+8*nbl))/2)
 
         for jj in range(0,npol):
