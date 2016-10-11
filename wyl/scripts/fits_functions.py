@@ -117,3 +117,12 @@ def read_fits(filename, pols):
             g0[polarization[0]][ant_index[jj]]=data_list[ii][jj]
     return g0
 
+### To Do ###
+def fc_gains_to_fits(s,f,pol,filename,ubls=None,ex_ants=None,repopath=None):
+    if not repopath == None:
+        githash = subprocess.check_output(['git','rev-parse','HEAD'], cwd=repopath)
+        ori = subprocess.check_output(['git','remote','show','origin'], cwd=repopath)
+        ori = ori.split('\n')[1].split(' ')[-1]
+        githash = githash.replace('\n','')
+
+

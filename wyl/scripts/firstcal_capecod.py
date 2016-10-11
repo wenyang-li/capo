@@ -1,9 +1,10 @@
 # edited version of firstcal in capo/omni/
 #! /usr/bin/env python
 import capo.hex as hx, capo.wyl as wyl, capo.red as red, capo.omni as omni
-import numpy as n, pylab as p, aipy as a
+import pylab as p, aipy as a
 import sys,optparse
 import numpy as np
+from IPython import embed
 
 o = optparse.OptionParser()
 a.scripting.add_standard_options(o,cal=True,pol=True)
@@ -54,10 +55,12 @@ for pp in pols:
 #arp.get_dict_of_uv_data(args, bl_string, opts.pol, verbose=True)
     datapack,wgtpack = {},{}
     for (i,j) in data.keys():
-        datapack[(i,j)] = data[(i,j)][p]
-        wgtpack[(i,j)] = np.logical_not(flags[(i,j)][p])
+        datapack[(i,j)] = data[(i,j)][pp]
+        wgtpack[(i,j)] = np.logical_not(flags[(i,j)][pp])
 #    nfreq = datapack[datapack.keys()[0]].shape[1] #XXX less hacky than previous hardcode, but always safe?
-    dlys = n.fft.fftshift(n.fft.fftfreq(fqs.size, np.diff(fqs)[0]))
+    fqs = fqs/1e9
+#     fqs = np.linspace(.1,.2,200)
+    dlys = np.fft.fftshift(np.fft.fftfreq(fqs.size, np.diff(fqs)[0]))
 
 #gets phase solutions per frequency.
     fc = omni.FirstCal(datapack,wgtpack,fqs,info)
@@ -70,4 +73,5 @@ for pp in pols:
         outname='%s/%s'%(opts.outpath,filename.split('/')[-1])
     else:
         outname='%s'%filename
+#    embed()
     omni.save_gains_fc(sols,fqs, pp[0], outname, ubls=ubls, ex_ants=ex_ants)

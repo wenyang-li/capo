@@ -66,6 +66,7 @@ class data_miriad(uvdata.miriad.Miriad):
             else:
                 header_value = uv[miriad_header_data[item]]
             setattr(self, item, header_value)
+        self.channel_width *= 1e9
         data_accumulator = {}
         for (uvw, t, (i,j)), d, f in uv.all(raw=True):
             try: data_accumulator[uv['pol']].append([t,i,j,d,f])
