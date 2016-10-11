@@ -49,6 +49,7 @@ class data_uvfits(uvdata.uvfits.UVFITS):
         self.Npols = D.header['NAXIS3']
         self.freq_array = self._gethduaxis(D, 4)
         self.polarization_array = np.int32(self._gethduaxis(D, 3))
+        self.freq_array.shape = (1,) + self.freq_array.shape
         
         ant_hdu = F[hdunames['AIPS AN']]
         self.antenna_names = ant_hdu.data.field('ANNAME').tolist()
