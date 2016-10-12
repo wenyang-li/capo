@@ -1,8 +1,10 @@
 import numpy as np
 import subprocess, datetime, os
 from astropy.io import fits
+import capo.omni as omni
+import sys
 
-def writefits(npzfiles, repopath, ex_ants=[], name_dict={}):
+def writefits(npzfiles, repopath=None, ex_ants=[], name_dict={}):
     ### This function writes the solution from output npz files from omni_run to a fits file.   ### 
     ### npzfiles can be a list of npz files with solutions for different polarizations but for  ###.
     ### the same obs id. repopath is for writing the program of origin and git hash, e.g., if   ###
@@ -20,11 +22,16 @@ def writefits(npzfiles, repopath, ex_ants=[], name_dict={}):
     if os.path.exists(outfn):
         print '   %s exists, skipping...' % outfn
         return 0
-    githash = subprocess.check_output(['git','rev-parse','HEAD'], cwd=repopath)
+
     today = datetime.date.today().strftime("Date: %d, %b %Y")
-    ori = subprocess.check_output(['git','remote','show','origin'], cwd=repopath)
-    ori = ori.split('\n')[1].split(' ')[-1]
-    githash = githash.replace('\n','')
+    if not repopath == None:
+        githash = subprocess.check_output(['git','rev-parse','HEAD'], cwd=repopath)
+        ori = subprocess.check_output(['git','remote','show','origin'], cwd=repopath)
+        ori = ori.split('\n')[1].split(' ')[-1]
+        githash = githash.replace('\n','')
+    else:
+        githash = ''
+        ori = ''
 
     datadict = {}
     ant = []
@@ -96,7 +103,7 @@ def writefits(npzfiles, repopath, ex_ants=[], name_dict={}):
     
     
 def read_fits(filename, pols):
-    ### This function reads in the solution from fits file, whitch returns a dictionary of polarization, ###
+    ### This function reads in the solution from fits file, which returns a dictionary of polarization,  ###
     ### each polarization is a dictionary of antenna indexes, which has a value as an numpy array with   ###
     ### the shape (Ntimes, Nfreqs)                                                                       ###
     g0 = {}
@@ -118,11 +125,24 @@ def read_fits(filename, pols):
     return g0
 
 ### To Do ###
-def fc_gains_to_fits(s,f,pol,filename,ubls=None,ex_ants=None,repopath=None):
+def fc_gains_to_fits(npznames,filename,ubls=None,ex_ants=None,repopath=None):
     if not repopath == None:
         githash = subprocess.check_output(['git','rev-parse','HEAD'], cwd=repopath)
         ori = subprocess.check_output(['git','remote','show','origin'], cwd=repopath)
         ori = ori.split('\n')[1].split(' ')[-1]
         githash = githash.replace('\n','')
+    else:
+        ori = ''
+        githash = ''
+    today = datetime.date.today().strftime("Date: %d, %b %Y")
+    outname = '%s.fc.fits'%filename
+    prihdr = fits.Header()
+    prihdr['DATE'] = today
+    prihdr['ORIGIN'] = ori
+    prihdr['HASH'] = githash
+    prihdr['PROTOCOL'] = 'Divide uncalibrated data by these gains to obtain calibrated data.'
+
+
+
 
 

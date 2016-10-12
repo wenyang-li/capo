@@ -2,7 +2,7 @@
 #! /usr/bin/env python
 import capo.hex as hx, capo.wyl as wyl, capo.red as red, capo.omni as omni
 import pylab as p, aipy as a
-import sys,optparse
+import sys,optparse,glob
 import numpy as np
 from IPython import embed
 
@@ -50,8 +50,17 @@ print 'Number of redundant baselines:',len(reds)
 #Read in data here.
 ant_string =','.join(map(str,info.subsetant))
 bl_string = ','.join(['_'.join(map(str,k)) for k in reds])
+file_group = []
+for fn in args:
+    if opts.ftype == 'fhd':
+        file_group.append(glob.glob(fn + '*'))
+    elif opts.ftype == 'uvfits' or opts.ftype == 'miriad':
+        file_group.append(fn)
+    else:
+        raise IOError('invalid filetype, it should be miriad, uvfits, or fhd')
+npzlist = []
+times, data, flags, ginfo, fqs = wyl.uv_read(file_group, filetype=opts.ftype, bl_str=bl_string, p_list=pols)
 for pp in pols:
-    times, data, flags, ginfo, fqs = wyl.uv_read(args, filetype=opts.ftype, bl_str=bl_string, p_list=[pp])
 #arp.get_dict_of_uv_data(args, bl_string, opts.pol, verbose=True)
     datapack,wgtpack = {},{}
     for (i,j) in data.keys():
@@ -75,3 +84,11 @@ for pp in pols:
         outname='%s'%filename
 #    embed()
     omni.save_gains_fc(sols,fqs, pp[0], outname, ubls=ubls, ex_ants=ex_ants)
+    npzlist.append(outname+'.fc.npz')
+
+
+
+
+
+
+
