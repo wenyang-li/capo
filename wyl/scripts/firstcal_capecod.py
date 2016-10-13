@@ -67,8 +67,7 @@ for pp in pols:
         datapack[(i,j)] = data[(i,j)][pp]
         wgtpack[(i,j)] = np.logical_not(flags[(i,j)][pp])
 #    nfreq = datapack[datapack.keys()[0]].shape[1] #XXX less hacky than previous hardcode, but always safe?
-    fqs = fqs/1e9
-#     fqs = np.linspace(.1,.2,200)
+    fqs = fqs/1e9 #  in GHz
     dlys = np.fft.fftshift(np.fft.fftfreq(fqs.size, np.diff(fqs)[0]))
 
 #gets phase solutions per frequency.

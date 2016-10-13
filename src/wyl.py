@@ -197,7 +197,8 @@ def uv_read(filenames, filetype=None, bl_str=None,antstr='cross',p_list = ['xx',
         nbl = uvdata.Nbls
         nfreq = uvdata.Nfreqs
 
-        info['times'] = uvdata.time_array[::nbl]
+        try: info['times'] = np.append(info['times'],uvdata.time_array[::nbl],axis=0)
+        except: info['times'] = uvdata.time_array[::nbl]
         info['lsts'] = np.array([])   #uvdata.lst_array[::nbl]
         pol = uvdata.polarization_array
         npol = len(pol)
@@ -243,8 +244,12 @@ def uv_read(filenames, filetype=None, bl_str=None,antstr='cross',p_list = ['xx',
                 if not pp in p_list: continue
                 if not dat[bl].has_key(pp):
                     dat[bl][pp],flg[bl][pp] = [],[]
-                dat[bl][pp] = np.complex64(data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii])
-                flg[bl][pp] = np.array(flag[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii])
+                datcopy = np.complex64(data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii])
+                flgcopy = np.array(flag[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii])
+                try: dat[bl][pp] = np.append(dat[bl][pp],datcopy,axis=0)
+                except: dat[bl][pp] = datcopy
+                try: flg[bl][pp] = np.append(flg[bl][pp],flgcopy,axis=0)
+                except: flg[bl][pp] = flgcopy
 
         ginfo[0] = nant
         ginfo[1] = Nt

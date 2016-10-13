@@ -124,8 +124,9 @@ def read_fits(filename, pols):
             g0[polarization[0]][ant_index[jj]]=data_list[ii][jj]
     return g0
 
-### To Do ###
-def fc_gains_to_fits(npznames,filename,ubls=None,ex_ants=None,repopath=None):
+
+def fc_gains_to_fits(npznames,filename,repopath=None,name_dict={}):
+    #### For firstcal solution without time axis ###
     if not repopath == None:
         githash = subprocess.check_output(['git','rev-parse','HEAD'], cwd=repopath)
         ori = subprocess.check_output(['git','remote','show','origin'], cwd=repopath)
@@ -136,13 +137,90 @@ def fc_gains_to_fits(npznames,filename,ubls=None,ex_ants=None,repopath=None):
         githash = ''
     today = datetime.date.today().strftime("Date: %d, %b %Y")
     outname = '%s.fc.fits'%filename
+    print outname
+    if os.path.exists(outname):
+        print '   %s exists, skipping...' % outname
+        return 0
+    datadict = {}
+    ant = []
+    for npz in npznames:
+        data = np.load(npz)
+        for ii, ss in enumerate(data):
+            if ss[0].isdigit():
+                datadict[ss] = data[ss][0]
+                intss = int(ss[0:-1])
+                if not intss in ant:
+                    ant.append(intss)
+    ant.sort()
+    try: ex_ants = list(data['ex_ants'])
+    except(KeyError): ex_ants = []
+    if name_dict == {}: tot = ant + ex_ants
+    else: tot = name_dict.keys()
+    tot.sort()
+    freq = data['freqs']/1e6  #in MHz
+    pol = ['x', 'y']
+    Na = len(tot)
+    Nf = freq.shape[0]
+    parray = np.array(['x']*Nf*Na+['y']*Nf*Na)
+    farray = np.array(list(np.resize(freq,(Na,Nf)).transpose().reshape(Na*Nf))*2)
+    datarray = []
+    flgarray = []
+    for ii in range(0,2):
+        dd = []
+        fl = []
+        for jj in range(0,Na):
+            try: dd.append(datadict[str(tot[jj])+pol[ii]])
+            except(KeyError): dd.append(np.ones((Nf),dtype=float))
+            if tot[jj] in ex_ants: fl.append(np.ones((Nf),dtype=bool))
+            else: fl.append(np.zeros((Nf),dtype=bool))
+        datarray.append(dd)
+        flgarray.append(fl)
+    datarray = np.array(datarray)
+    datarray = datarray.swapaxes(1,2).reshape(2*Nf*Na)
+    flgarray = np.array(flgarray)
+    flgarray = flgarray.swapaxes(1,2).reshape(2*Nf*Na)
+    nam = []
+    for nn in range(0,Na):
+        try: nam.append(name_dict[tot[nn]])
+        except(KeyError): nam.append('ant'+str(tot[nn]))
+    numarray = np.array(tot*2*Nf)
+    namarray = np.array(nam*2*Nf)
+
     prihdr = fits.Header()
     prihdr['DATE'] = today
     prihdr['ORIGIN'] = ori
     prihdr['HASH'] = githash
     prihdr['PROTOCOL'] = 'Divide uncalibrated data by these gains to obtain calibrated data.'
+    prihdr['NFREQS'] = Nf
+    prihdr['NANTS'] = Na
+    prihdr['NPOLS'] = 2
+    prihdu = fits.PrimaryHDU(header=prihdr)
+    colnam = fits.Column(name='ANT NAME', format='A10', array=namarray)
+    colnum = fits.Column(name='ANT INDEX', format='I',array=numarray)
+    colf = fits.Column(name='FREQ (MHZ)', format='E', array=farray)
+    colp = fits.Column(name='POL', format='A4', array=parray)
+    coldat = fits.Column(name='GAIN', format='M', array=datarray)
+    colflg = fits.Column(name='FLAG', format='L', array=flgarray)
+    cols = fits.ColDefs([colnam, colnum, colf, colp, coldat, colflg])
+    tbhdu = fits.BinTableHDU.from_columns(cols)
+    hdulist = fits.HDUList([prihdu, tbhdu])
+    hdulist.writeto(outname)
 
-
-
+def fc_gains_from_fits(filename):
+### for reading firstcal solution without time axis ###
+    g0 = {}
+    hdu = fits.open(filename)
+    Nfreqs = hdu[0].header['NFREQS']
+    Npols = hdu[0].header['NPOLS']
+    Nants = hdu[0].header['NANTS']
+    ant_index = hdu[1].data['ANT INDEX'][0:Nants]
+    pol_list = hdu[1].data['POL'].reshape(Npols,Nants*Nfreqs)[:,0]
+    data_list = hdu[1].data['GAIN'].reshape((Npols, Nfreqs, Nants)).swapaxes(1,2)
+    for ii in range(0,Npols):
+        p = pol_list[ii]
+        g0[p] = {}
+        for jj in range(0,Nants):
+            g0[p][ant_index[jj]] = data_list[ii][jj]
+    return g0
 
 
