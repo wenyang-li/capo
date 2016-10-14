@@ -49,8 +49,9 @@ for pp,p in enumerate(pols):
             print 'Reading', opts.fc2
             cp = numpy.load(opts.fc2)
             for i in cp.keys():
-                if i.isdigit():
-                    g0[p[0]][int(i)] = cp[i] / numpy.abs(cp[i])
+                if i[0].isdigit():
+                    ind = int(i[0:-1])
+                    g0[p[0]][ind] = cp[i] / numpy.abs(cp[i])
         else:
             new_cp = opts.fc2.split('.npz')[0][:-2]+p+'.npz'
             print 'Reading', new_cp
