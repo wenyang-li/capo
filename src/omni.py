@@ -186,8 +186,6 @@ def pos_to_info(position, pols=['x'], fcal=False, **kwargs):
     ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
     kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
     reds = filter_reds(reds, **kwargs)
-    from IPython import embed
-    embed()
     if fcal:
         info = FirstCalRedundantInfo(nant)
     else:
