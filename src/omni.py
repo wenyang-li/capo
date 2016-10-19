@@ -167,25 +167,27 @@ def aa_pos_to_info(aa, pols=['x'], fcal=False, **kwargs):
 def pos_to_info(position, pols=['x'], fcal=False, **kwargs):
     nant = len(position)
     antpos = -np.ones((nant*len(pols),3))
+    pos_red = np.zeros((nant*len(pols),3))
     xmin = 0
     ymin = 0
-    wmin = 0
     for ant in position.keys():
         if position[ant]['top_x'] < xmin: xmin = position[ant]['top_x']
         if position[ant]['top_y'] < ymin: ymin = position[ant]['top_y']
-        if position[ant]['top_z'] < wmin: wmin = position[ant]['top_z']
     for ant in position.keys():
         x = position[ant]['top_x'] - xmin + 0.1
         y = position[ant]['top_y'] - ymin + 0.1
-        w = position[ant]['top_z'] - wmin + 0.1
+        w = position[ant]['top_z']
         for z, pol in enumerate(pols):
-            z = 10**z
+            z = 2**z
             i = Antpol(ant,pol,len(position))
-            antpos[i,0],antpos[i,1],antpos[i,2] = x,y,w+z
-    reds = compute_reds(nant, pols, antpos[:nant],tol=0.192) # 1/3 meters threshold, divided by sqrt3
+            pos_red[i,0],pos_red[i,1],pos_red[i,2] = x,y,w+100*z
+            antpos[i,0],antpos[i,1],antpos[i,2] = x,y,z
+    reds = compute_reds(nant, pols, pos_red[:nant],tol=0.192) # 1/3 meters threshold, divided by sqrt3
     ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
     kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
     reds = filter_reds(reds, **kwargs)
+    from IPython import embed
+    embed()
     if fcal:
         info = FirstCalRedundantInfo(nant)
     else:
