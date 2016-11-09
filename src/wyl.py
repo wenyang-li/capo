@@ -4,7 +4,7 @@ import subprocess, datetime, os
 from astropy.io import fits
 from uv_data_only import *
 
-def output_mask_array(filename, filetype, flag_array, auto):
+def output_mask_array(filename, filetype, flag_array):
     outfn = ''
     if filetype == 'fhd':
         for fn in filename:
@@ -14,13 +14,12 @@ def output_mask_array(filename, filetype, flag_array, auto):
         outfn = '.'.join(filename.split('.')[0:-1]) + '_mask.npy'
     elif filetype == 'miriad':
         outfn = '.'.join(filename.split('.')[0:-2]) + '_mask.npy'
-    mask_array = np.sum(np.int32(flag_array),axis=1)
-    if np.amin(mask_array) > 0:
-        if np.amin(mask_array) == auto: mask_array -= auto
+    invf = 1 - flag_array
+    sf = np.sum((np.sum(invf,axis=0)),axis=0).astype(bool)
+    st = np.sum((np.sum(invf,axis=1)),axis=1).astype(bool)
+    mask_array = 1 - np.outer(st,sf)
     mask_array = mask_array.astype(bool)
-    if np.amin(mask_array):
-        print "Warning: each time and frequency there is at least one baseline data flagged (excluding auto correlation)"
-    else: np.save(outfn,mask_array)
+    np.save(outfn,mask_array)
 
 
 def writefits(npzfiles, repopath, ex_ants=[], name_dict={}):
@@ -343,7 +342,7 @@ def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], o
             if not infodict['name_dict'].has_key(uvdata.antenna_numbers[ii]):
                 infodict['name_dict'][uvdata.antenna_numbers[ii]] = uvdata.antenna_names[ii]
         if output_mask:
-            output_mask_array(filename, filetype, flag[:,0][:,:,0].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs), auto)
+            output_mask_array(filename, filetype, flag[:,0][:,:,0].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs))
     return infodict
 
 
