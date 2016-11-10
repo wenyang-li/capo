@@ -1,8 +1,4 @@
-
-#import gb_weather, pfb, pspec, dspec, red, fringe, omni, frf_conv, uCal, miriad
-#import arp, jcp, dfm, dcj, zsa, ctc, wyl
-
-import pfb, pspec, dspec, red, fringe, miriad
+import pfb, pspec, dspec, red, fringe, miriad, linsolve
 import fringe as frf_conv # for backward compatibility
 import oqe
 import warnings
