@@ -24,7 +24,8 @@ fqs = a.cal.get_freqs(uv['sdf'], uv['sfreq'], uv['nchan'])
 del(uv)
 
 #hera info assuming a hex of 19 and 128 antennas
-aa = a.cal.get_aa(opts.cal, fqs)
+#aa = a.cal.get_aa(opts.cal, fqs)
+exec('from %s import antpos as _antpos'% opts.cal)
 ex_ants = []
 ubls = []
 for a in opts.ex_ants.split(','):
@@ -37,7 +38,8 @@ for bl in opts.ubls.split(','):
     except: pass
 print 'Excluding Antennas:',ex_ants
 if len(ubls) != None: print 'Using Unique Baselines:',ubls
-info = omni.aa_to_info(aa, fcal=True, ubls=ubls, ex_ants=ex_ants)
+#info = omni.aa_to_info(aa, fcal=True, ubls=ubls, ex_ants=ex_ants)
+info = omni.pos_to_info(_antpos, fcal=True, ubls=ubls, ex_ants=ex_ants)
 reds = flatten_reds(info.get_reds())
 
 print 'Number of redundant baselines:',len(reds)

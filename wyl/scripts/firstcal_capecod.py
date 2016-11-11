@@ -37,7 +37,7 @@ def firstcal(datdict):
     #gets phase solutions per frequency.
     info = omni.pos_to_info(datdict['antpos'], fcal=True, ubls=datdict['ubls'], ex_ants=datdict['ex_ants'])
     fc = omni.FirstCal(datapack,wgtpack,fqs,info)
-    sols = fc.run(tune=True,verbose=False,offset=True,plot=False)
+    sols = fc.run(finetune=True,verbose=opts.verbose,plot=False,noclean=True,offset=False,average=False,window='none')
     
     #Save solutions
     filename = datdict['filename']
@@ -122,7 +122,7 @@ npzlist = par.map(firstcal, arglist)
 par.close()
 #npzlist.append(outname+'.fc.npz')
 
-omni.fc_gains_to_fits(npzlist,fn)
+#omni.fc_gains_to_fits(npzlist,fn)
 
 
 
