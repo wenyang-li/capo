@@ -19,6 +19,8 @@ o.add_option('--omnipath',dest='omnipath',default='',type='string',
             help='Path to save .npz files. Include final / in path.')
 o.add_option('--ba',dest='ba',default=None,
             help='Antennas to exclude, separated by commas.')
+o.add_option('--flength',dest='flength',default=None,
+             help='a threshold for baseline lengths to use, in meters')
 o.add_option('--ftype', dest='ftype', default='', type='string',
             help='Type of the input file, .uvfits, or miriad, or fhd, to read fhd, simply type in the path/obsid')
 o.add_option('--iftxt', dest='iftxt', default=False, action='store_true',
@@ -127,7 +129,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     ex_ants = infodict['ex_ants']
     print 'Getting reds from calfile'
     print 'generating info:'
-    info = capo.omni.pos_to_info(pos, pols=list(set(''.join([polar]))), ex_ants=ex_ants, crosspols=[polar])
+    filter_length = None
+    if not opts.flength == None: filter_length = float(opts.flength)
+    info = capo.omni.pos_to_info(pos, pols=list(set(''.join([polar]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[polar])
 
 ### Omnical-ing! Loop Through Compressed Files ###
 

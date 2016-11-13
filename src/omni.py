@@ -164,7 +164,7 @@ def aa_pos_to_info(aa, pols=['x'], fcal=False, **kwargs):
     return info
 ####################################################################################################
 
-def pos_to_info(position, pols=['x'], fcal=False, **kwargs):
+def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, **kwargs):
 ### the position is a dictionary, containing only antennas involved in redundant groups.  ###
 ### position dict should have keys of ant inds, with values of ideal positions, and a key ###
 ### named 'nant', indicate the number of total antennas across the array                  ###
@@ -186,6 +186,15 @@ def pos_to_info(position, pols=['x'], fcal=False, **kwargs):
             i = Antpol(ant,pol,nant)
             antpos[i,0],antpos[i,1],antpos[i,2] = x,y,z
     reds = compute_reds(nant, pols, antpos[:nant],tol=0.01)
+    ubls = None
+    if not filter_length == None:
+        ubls = []
+        for r in reds:
+            bli = int(r[0][0])
+            blj = int(r[0][1])
+            length = np.linalg.norm(antpos[blj]-antpos[bli])
+            if length < filter_length: ubls.append((bli,blj))
+        kwargs['ubls'] = kwargs.get('ubls',[]) + ubls
     ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
     kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
     reds = filter_reds(reds, **kwargs)
