@@ -257,7 +257,7 @@ def uv_read(filenames, filetype=None, bl_str=None,antstr='cross',p_list = ['xx',
         ginfo[2] = nfreq
     return info, dat, flg, ginfo, freqarr
 
-def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], output_mask = True):
+def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], tave=False, output_mask = True):
     ### Now only support reading in one data file once, don't load in multiple obs ids ###
     info = {'lsts':[], 'times':[]}
     ginfo = [0,0,0]
@@ -327,6 +327,11 @@ def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], o
                     dat[bl][pp],flg[bl][pp] = [],[]
                 dat[bl][pp] = np.complex64(data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii])
                 flg[bl][pp] = np.array(flag[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii])
+                if tave:
+                    m = np.ma.masked_array(dat[bl][pp],mask=flg[bl][pp])
+                    m = np.mean(m,axis=0)
+                    dat[bl][pp] = m.data.reshape(1,-1)
+                    flg[bl][pp] = m.mask.reshape(1,-1)
             ginfo[0] = nant
             ginfo[1] = Nt
             ginfo[2] = nfreq

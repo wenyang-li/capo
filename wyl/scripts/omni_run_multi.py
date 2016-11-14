@@ -23,6 +23,10 @@ o.add_option('--flength',dest='flength',default=None,
              help='a threshold for baseline lengths to use, in meters')
 o.add_option('--ftype', dest='ftype', default='', type='string',
             help='Type of the input file, .uvfits, or miriad, or fhd, to read fhd, simply type in the path/obsid')
+o.add_option('--tave', dest='tave', default=False, action='store_true',
+             help='choose to average data over time before calibration or not')
+o.add_option('--gave', dest='gave', default=False, action='store_true',
+             help='choose to average solution over time after calibration or not')
 o.add_option('--iftxt', dest='iftxt', default=False, action='store_true',
             help='A switch to write the npz info to a ucla format txt file or not')
 o.add_option('--iffits', dest='iffits', default=False, action='store_true',
@@ -142,7 +146,8 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for p in [polar]:
             if not g0.has_key(p[0]): g0[p[0]] = {}
             for iant in range(0, ginfo[0]):
-                g0[p[0]][iant] = numpy.ones((ginfo[1],ginfo[2]))
+                if opts.tave: g0[p[0]][iant] = numpy.ones((1,ginfo[2]))
+                else: g0[p[0]][iant] = numpy.ones((ginfo[1],ginfo[2]))
 #    elif calpar.endswith('.npz') or calpar.endswith('.fits'):
 #        SH = (ginfo[1],ginfo[2])
 #        for p in g0.keys():
@@ -167,6 +172,18 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=True) #SAK CHANGE REMOVEDEGEN
     print '   Lincal-ing'
     m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=True)
+    if opts.tave:
+        for p in g2.keys():
+            for a in g2[p].keys():
+                g2[p][a] = numpy.resize(g2[p][a],(ginfo[1],ginfo[2]))
+        for pp in v2.keys():
+            for bl in v2[pp].keys():
+                v2[pp][bl] = numpy.resize(v2[pp][bl],(ginfo[1],ginfo[2]))
+    if opts.gave:
+        for p in g2.keys():
+            for a in g2[p].keys():
+                gmean = numpy.mean(g2[p][a],axis=0)
+                g2[p][a] = numpy.resize(gmean,(ginfo[1],ginfo[2]))
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
@@ -193,12 +210,12 @@ for f,filename in enumerate(args):
     print "  Reading data: " + filename
     if opts.ftype == 'miriad':
         for p in pols:
-            dict0 = capo.wyl.uv_read_v2([filegroup[p]], filetype = 'miriad', antstr='cross',p_list=[p])
+            dict0 = capo.wyl.uv_read_v2([filegroup[p]], filetype = 'miriad', antstr='cross', p_list=[p], tave=opts.tave)
             infodict[p] = dict0[p]
             infodict[p]['filename'] = filegroup[p]
             infodict['name_dict'] = dict0['name_dict']
     else:
-        infodict = capo.wyl.uv_read_v2([filegroup[key] for key in filegroup.keys()], filetype=opts.ftype, antstr='cross', p_list=pols)
+        infodict = capo.wyl.uv_read_v2([filegroup[key] for key in filegroup.keys()], filetype=opts.ftype, antstr='cross', p_list=pols, tave=opts.tave)
         for p in pols:
             infodict[p]['filename'] = filename
     print "  Finish reading."
