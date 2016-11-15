@@ -148,14 +148,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             for iant in range(0, ginfo[0]):
                 if opts.tave: g0[p[0]][iant] = numpy.ones((1,ginfo[2]))
                 else: g0[p[0]][iant] = numpy.ones((ginfo[1],ginfo[2]))
-#    elif calpar.endswith('.npz') or calpar.endswith('.fits'):
-#        SH = (ginfo[1],ginfo[2])
-#        for p in g0.keys():
-#            for i in g0[p]: g0[p][i] = numpy.resize(g0[p][i],SH)
-#    else:
-#        SH = (ginfo[1],ginfo[2])
-#        for iant in range(0, ginfo[0]):
-#            if not g0[polar[0]].has_key(iant): g0[polar[0]][iant] = numpy.ones(SH)
 
     t_jd = timeinfo['times']
     t_lst = timeinfo['lsts']

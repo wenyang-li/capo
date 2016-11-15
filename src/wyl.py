@@ -330,7 +330,7 @@ def uv_read_v2(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], t
                 if tave:
                     m = np.ma.masked_array(dat[bl][pp],mask=flg[bl][pp])
                     m = np.mean(m,axis=0)
-                    dat[bl][pp] = m.data.reshape(1,-1)
+                    dat[bl][pp] = np.complex64(m.data.reshape(1,-1))
                     flg[bl][pp] = m.mask.reshape(1,-1)
             ginfo[0] = nant
             ginfo[1] = Nt
