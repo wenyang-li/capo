@@ -78,27 +78,6 @@ def compute_reds(nant, pols, *args, **kwargs):
         for pj in pols:
             reds += [[(Antpol(i,pi,nant),Antpol(j,pj,nant)) for i,j in gp] for gp in _reds]
     return reds
- 
-#def aa_to_info(aa, pols=['x'], **kwargs):
-#    '''Use aa.ant_layout to generate redundances based on ideal placement.
-#    The remaining arguments are passed to omnical.arrayinfo.filter_reds()'''
-#    layout = aa.ant_layout
-#    nant = len(aa)
-#    antpos = -np.ones((nant*len(pols),3)) # -1 to flag unused antennas
-#    xs,ys = np.indices(layout.shape)
-#    for ant,x,y in zip(layout.flatten(), xs.flatten(), ys.flatten()):
-#        for z,pol in enumerate(pols):
-#            z = 2**z # exponential ensures diff xpols aren't redundant w/ each other
-#            i = Antpol(ant,pol,len(aa)) # creates index in POLNUM/NUMPOL for pol
-#            antpos[i,0],antpos[i,1],antpos[i,2] = x,y,z
-#    reds = compute_reds(nant, pols, antpos[:nant],tol=.1) # only first nant b/c compute_reds treats pol redundancy separately
-#    # XXX haven't enforced xy = yx yet.  need to conjoin red groups for that
-#    ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
-#    kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
-#    reds = filter_reds(reds, **kwargs)
-#    info = RedundantInfo(nant)
-#    info.init_from_reds(reds,antpos)
-#    return info
 
 def aa_to_info(aa, pols=['x'], fcal=False, **kwargs):
     '''Use aa.ant_layout to generate redundances based on ideal placement.
@@ -129,47 +108,14 @@ def aa_to_info(aa, pols=['x'], fcal=False, **kwargs):
     info.init_from_reds(reds,antpos)
     return info
 
-#generate info from real positions
-####################################################################################################
-def aa_pos_to_info(aa, pols=['x'], fcal=False, **kwargs):
-    '''Use aa.ant_layout to generate redundances based on real placement.
-        The remaining arguments are passed to omnical.arrayinfo.filter_reds()'''
-    nant = len(aa)
-    antpos = -np.ones((nant*len(pols),3)) # -1 to flag unused antennas
-    xmin = 0
-    ymin = 0
-    for ant in xrange(nant):  #trying to shift the crd to make sure they are positive
-        bl = aa.get_baseline(0,ant,src='z')
-        x,y = bl[0], bl[1]
-        if x < xmin: xmin = x
-        if y < ymin: ymin = y
-    for ant in xrange(nant):
-        bl = aa.get_baseline(0,ant,src='z')
-        x,y = bl[0] - xmin , bl[1] - ymin   #w is currently not included
-        for z,pol in enumerate(pols):
-            z = 2**z # exponential ensures diff xpols aren't redundant w/ each other
-            i = Antpol(ant,pol,len(aa)) # creates index in POLNUM/NUMPOL for pol
-            antpos[i,0],antpos[i,1],antpos[i,2] = x,y,z
-    reds = compute_reds(nant, pols, antpos[:nant],tol=0.01) # only first nant b/c compute_reds treats pol redundancy separately
-    # XXX haven't enforced xy = yx yet.  need to conjoin red groups for that
-    ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
-    kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
-    reds = filter_reds(reds, **kwargs)
-    if fcal:
-        info = FirstCalRedundantInfo(nant)
-    else:
-        info = RedundantInfo(nant)
-#info = RedundantInfo(nant)
-    info.init_from_reds(reds,antpos)
-    return info
-####################################################################################################
-
+#generate info from perfect positions
 def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, **kwargs):
-### the position is a dictionary, containing only antennas involved in redundant groups.  ###
-### position dict should have keys of ant inds, with values of ideal positions, and a key ###
-### named 'nant', indicate the number of total antennas across the array                  ###
+### the position is a dictionary, containing only antennas involved in redundant groups.    ###
+### position dict should have keys of ant inds, with values of ideal positions, and cable   ###
+### lengths, and a key named 'nant', indicate the number of total antennas across the array ###
     nant = position['nant']
     antpos = -np.ones((nant*len(pols),3))
+    redinfo = np.zeros((nant*len(pols),3))
     xmin = 0
     ymin = 0
     for key in position.keys():
@@ -180,12 +126,14 @@ def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, **kwargs):
         try:
             x = position[ant]['top_x'] - xmin + 0.1
             y = position[ant]['top_y'] - ymin + 0.1
+            cable = position[ant]['cable']
         except(KeyError): continue
         for z, pol in enumerate(pols):
             z = 2**z
             i = Antpol(ant,pol,nant)
             antpos[i,0],antpos[i,1],antpos[i,2] = x,y,z
-    reds = compute_reds(nant, pols, antpos[:nant],tol=0.01)
+            redinfo[i,0],redinfo[i,1],redinfo[i,2] = x,y,cable*z
+    reds = compute_reds(nant, pols, redinfo[:nant],tol=0.01)
     ubls = None
     if not filter_length == None:
         ubls = []
