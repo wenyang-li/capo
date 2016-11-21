@@ -115,7 +115,7 @@ def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, **kwargs):
 ### lengths, and a key named 'nant', indicate the number of total antennas across the array ###
     nant = position['nant']
     antpos = -np.ones((nant*len(pols),3))
-    redinfo = np.zeros((nant*len(pols),3))
+#    redinfo = np.zeros((nant*len(pols),3))
     xmin = 0
     ymin = 0
     for key in position.keys():
@@ -126,14 +126,14 @@ def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, **kwargs):
         try:
             x = position[ant]['top_x'] - xmin + 0.1
             y = position[ant]['top_y'] - ymin + 0.1
-            cable = position[ant]['cable']
+#            cable = position[ant]['cable']
         except(KeyError): continue
         for z, pol in enumerate(pols):
             z = 2**z
             i = Antpol(ant,pol,nant)
             antpos[i,0],antpos[i,1],antpos[i,2] = x,y,z
-            redinfo[i,0],redinfo[i,1],redinfo[i,2] = x,y,cable*z
-    reds = compute_reds(nant, pols, redinfo[:nant],tol=0.01)
+#            redinfo[i,0],redinfo[i,1],redinfo[i,2] = x,y,cable*z
+    reds = compute_reds(nant, pols, antpos[:nant],tol=0.01)
     ubls = None
     if not filter_length == None:
         ubls = []
