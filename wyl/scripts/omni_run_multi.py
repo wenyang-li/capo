@@ -161,9 +161,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             i,j = bl
             wgts[p][(j,i)] = wgts[p][(i,j)] = numpy.logical_not(f[bl][p]).astype(numpy.int)
     print '   Logcal-ing' 
-    m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=True) #SAK CHANGE REMOVEDEGEN
+    m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=False) #SAK CHANGE REMOVEDEGEN
     print '   Lincal-ing'
-    m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=True)
+    m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=False)
     if opts.tave:
         for p in g2.keys():
             for a in g2[p].keys():

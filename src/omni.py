@@ -154,7 +154,7 @@ def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, **kwargs):
     return info
 
 
-def redcal(data, info, xtalk=None, gains=None, vis=None,removedegen=False, uselogcal=True, maxiter=50, conv=1e-3, stepsize=.3, computeUBLFit=True, trust_period=1):
+def redcal(data, info, xtalk=None, gains=None, vis=None,removedegen=False, uselogcal=True, maxiter=150, conv=1e-3, stepsize=.3, computeUBLFit=True, trust_period=1):
     #add layer to support new gains format
     if gains:
         _gains = {}
