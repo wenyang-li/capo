@@ -196,7 +196,7 @@ def redundant_bl_cal_simple(d1,w1,d2,w2,fqs, cleantol=1e-4, window='none', finet
         for ii,(tau,d) in enumerate(zip(taus,d12_sum)):
             valid = n.where(d != 0, 1, 0) # Throw out zeros, which NaN in the log below
             #print valid.any()
-            valid = n.logical_and(valid, n.logical_and(fqs>.11,fqs<.19))
+            valid = n.logical_and(valid, n.logical_and(fqs>.1,fqs<.2))
             dly = n.angle(d*n.exp(-2j*n.pi*tau*fqs))
             dt,off = fit_line(dly,fqs,valid,offset=offset)
             dts.append(dt), offs.append(off)
