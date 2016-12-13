@@ -181,6 +181,24 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
                 gmean = numpy.mean(g2[p0][a],axis=0)
                 g2[p0][a] = numpy.resize(gmean,(ginfo[1],ginfo[2]))
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
+
+    ### rescale soltions if removedegen = False, comment these lines if turn removedegen on ###
+    g_rescale = 0
+    v_rescale = 0
+    ncount = 0
+    for kp in g2.keys():
+        for ka in g2[kp].keys():
+            g_rescale += numpy.mean(numpy.abs(g2[kp][ka]))
+            ncount += 1
+    g_rescale /= ncount
+    v_rescale = g_rescale*g_rescale
+    for kp in g2.keys():
+        for ka in g2[kp].keys():
+            g2[kp][ka] /= g_rescale
+    for kp in v2.keys():
+        for kb in v2[kp].keys():
+            v2[kp][kb] *= v_rescale
+    ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
     m2['lsts'] = t_lst
