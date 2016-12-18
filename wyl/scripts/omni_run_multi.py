@@ -211,9 +211,10 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         g_rescale /= ncount
         g_rescale /= g_scale[p[0]]
         v_rescale = g_rescale*g_rescale
+        refn = min(g2[p[0]].keys())
         for ka in g2[p[0]].keys(): ### take tile 1001 as reference tile ###
             g2[p[0]][ka] /= g_rescale
-            g2[p[0]][ka] /= (g2[p[0]][0]/numpy.abs(g2[p[0]][0]))
+            g2[p[0]][ka] /= (g2[p[0]][refn]/numpy.abs(g2[p[0]][refn]))
         for kb in v2[p].keys():
             v2[p][kb] *= v_rescale
     if opts.calpar.endswith('.sav'):
