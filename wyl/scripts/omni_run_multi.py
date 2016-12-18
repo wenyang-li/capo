@@ -97,8 +97,8 @@ if opts.calpar != None: #create g0 if txt file is provided
         g = cal['cal']['GAIN'][0]
         g0['x'] = {}
         g0['y'] = {}
-        gx = numpy.ma.masked_array(g[0],fqfl)
-        gy = numpy.ma.masked_array(g[1],fqfl)
+        gx = numpy.ma.masked_array(g[0],fqfl,fill_value=1.0)
+        gy = numpy.ma.masked_array(g[1],fqfl,fill_value=1.0)
         gnan = numpy.where(numpy.isnan(numpy.mean(gx,axis=1)))[0]
         g_scale['x'] = numpy.nanmean(numpy.abs(gx[56:-1]))
         g_scale['y'] = numpy.nanmean(numpy.abs(gy[56:-1]))
@@ -106,8 +106,8 @@ if opts.calpar != None: #create g0 if txt file is provided
             gx[nn] = g_scale['x']
             gy[nn] = g_scale['y']
         for ii in range(0,cal['cal']['N_TILE'][0]):
-            g0['x'][ii] = gx[ii].data
-            g0['y'][ii] = gy[ii].data
+            g0['x'][ii] = gx[ii].filled()
+            g0['y'][ii] = gy[ii].filled()
     else:
         raise IOError('invalid calpar file')
 
