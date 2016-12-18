@@ -5,6 +5,7 @@ import optparse, os, sys, glob
 from astropy.io import fits
 import pickle
 from multiprocessing import Pool
+from scipy.io.idl import readsav
 #from IPython import embed
 
 o = optparse.OptionParser()
@@ -31,6 +32,8 @@ o.add_option('--iftxt', dest='iftxt', default=False, action='store_true',
             help='A switch to write the npz info to a ucla format txt file or not')
 o.add_option('--iffits', dest='iffits', default=False, action='store_true',
             help='A switch to write the npz info to a ucla format fits file or not')
+o.add_option('--removedegen',dest='removedegen',default=False,action='store_true',
+             help='A switch to turn remove degen on')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -38,6 +41,7 @@ pols = opts.pol.split(',')
 files = {}
 #files=[]
 g0 = {} #firstcal gains
+g_scale = {'x': 1.0, 'y': 1.0}
 if opts.calpar != None: #create g0 if txt file is provided
     fname = opts.calpar
     if fname.endswith('.txt'):
@@ -85,6 +89,25 @@ if opts.calpar != None: #create g0 if txt file is provided
         for key1 in g0:
             for key2 in g0[key1]:
                 g0[key1][key2] /= numpy.abs(g0[key1][key2])
+    elif fname.endswith('.sav'):
+        cal = readsav(opts.calpar,python_dict=True)
+        fqfl = numpy.zeros((128,384),dtype=bool)
+        for ff in range(384):
+            if ff%16==0 or ff%16==15: fqfl[:,ff]=True
+        g = cal['cal']['GAIN'][0]
+        g0['x'] = {}
+        g0['y'] = {}
+        gx = numpy.ma.masked_array(g[0],fqfl)
+        gy = numpy.ma.masked_array(g[1],fqfl)
+        gnan = numpy.where(numpy.isnan(numpy.mean(gx,axis=1)))[0]
+        g_scale['x'] = numpy.nanmean(numpy.abs(gx[56:-1]))
+        g_scale['y'] = numpy.nanmean(numpy.abs(gy[56:-1]))
+        for nn in gnan:
+            gx[nn] = g_scale['x']
+            gy[nn] = g_scale['y']
+        for ii in range(0,cal['cal']['N_TILE'][0]):
+            g0['x'][ii] = gx[ii].data
+            g0['y'][ii] = gy[ii].data
     else:
         raise IOError('invalid calpar file')
 
@@ -147,7 +170,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for iant in range(0, ginfo[0]):
             if opts.tave: g0[p[0]][iant] = numpy.ones((1,ginfo[2]))
             else: g0[p[0]][iant] = numpy.ones((ginfo[1],ginfo[2]))
-    elif calpar.endswith('.npz'):
+    elif calpar.endswith('.npz') or calpar.endswith('.sav'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
             g0[p[0]][key] = numpy.resize(g0_temp,(ginfo[1],ginfo[2]))
@@ -165,39 +188,38 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         i,j = bl
         wgts[p][(j,i)] = wgts[p][(i,j)] = numpy.logical_not(f[bl][p]).astype(numpy.int)
     print '   Logcal-ing' 
-    m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=False) #SAK CHANGE REMOVEDEGEN
+    m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen) #SAK CHANGE REMOVEDEGEN
     print '   Lincal-ing'
-    m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=False)
+    m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
     if opts.tave:
-        for p0 in g2.keys():
-            for a in g2[p0].keys():
-                g2[p0][a] = numpy.resize(g2[p0][a],(ginfo[1],ginfo[2]))
-        for pp in v2.keys():
-            for bl in v2[pp].keys():
-                v2[pp][bl] = numpy.resize(v2[pp][bl],(ginfo[1],ginfo[2]))
+        for a in g2[p[0]].keys():
+            g2[p[0]][a] = numpy.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
+        for bl in v2[p].keys():
+            v2[p][bl] = numpy.resize(v2[p][bl],(ginfo[1],ginfo[2]))
     if opts.gave:
-        for p0 in g2.keys():
-            for a in g2[p0].keys():
-                gmean = numpy.mean(g2[p0][a],axis=0)
-                g2[p0][a] = numpy.resize(gmean,(ginfo[1],ginfo[2]))
+        for a in g2[p[0]].keys():
+            gmean = numpy.mean(g2[p[0]][a],axis=0)
+            g2[p[0]][a] = numpy.resize(gmean,(ginfo[1],ginfo[2]))
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
-
-    ### rescale soltions if removedegen = False, comment these lines if turn removedegen on ###
-#    g_rescale = 0
-#    v_rescale = 0
-#    ncount = 0
-#    for kp in g2.keys():
-#        for ka in g2[kp].keys():
-#            g_rescale += numpy.mean(numpy.abs(g2[kp][ka]))
-#            ncount += 1
-#    g_rescale /= ncount
-#    v_rescale = g_rescale*g_rescale
-#    for kp in g2.keys():
-#        for ka in g2[kp].keys():
-#            g2[kp][ka] /= g_rescale
-#    for kp in v2.keys():
-#        for kb in v2[kp].keys():
-#            v2[kp][kb] *= v_rescale
+    ############# To rescale solutions if not remove degen ####################
+    if not opts.removedegen:
+        g_rescale = 0
+        ncount = 0
+        for ka in g2[p[0]].keys():
+            g_rescale += numpy.mean(numpy.abs(g2[p[0]][ka]))
+            ncount += 1
+        g_rescale /= ncount
+        g_rescale /= g_scale[p[0]]
+        v_rescale = g_rescale*g_rescale
+        for ka in g2[p[0]].keys(): ### take tile 1001 as reference tile ###
+            g2[p[0]][ka] /= g_rescale
+            g2[p[0]][ka] /= (g2[p[0]][0]/numpy.abs(g2[p[0]][0]))
+        for kb in v2[p].keys():
+            v2[p][kb] *= v_rescale
+    if opts.calpar.endswith('.sav'):
+        for key in g0[p[0]].keys():
+            if not g2[p[0]].has_key(key):
+                g2[p[0]][key] = g0[p[0]][key]
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
