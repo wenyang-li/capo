@@ -205,8 +205,18 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if not opts.removedegen:
         g_rescale = 0
         ncount = 0
+        flag = numpy.zeros((ginfo[1],ginfo[2]),dtype=bool)
+        if opts.calpar.endswith('.sav'):
+            blacklist = [0,8,15]
+            for ki in range(0,384):
+                if ki%16 in blacklist: flag[:,ki] = True
+            flag[0] = True
+            flag[53] = True
+            flag[54] = True
+            flag[55] = True
         for ka in g2[p[0]].keys():
-            g_rescale += numpy.mean(numpy.abs(g2[p[0]][ka]))
+            gd = numpy.ma.masked_array(numpy.abs(g2[p[0]][ka]),flag)
+            g_rescale += numpy.mean(gd)
             ncount += 1
         g_rescale /= ncount
         g_rescale /= g_scale[p[0]]
