@@ -34,6 +34,8 @@ o.add_option('--iffits', dest='iffits', default=False, action='store_true',
             help='A switch to write the npz info to a ucla format fits file or not')
 o.add_option('--removedegen',dest='removedegen',default=False,action='store_true',
              help='A switch to turn remove degen on')
+o.add_option('--instru', dest='instru', default='mwa', type='string',
+             help='instrument type')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -201,13 +203,19 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             gmean = numpy.mean(g2[p[0]][a],axis=0)
             g2[p[0]][a] = numpy.resize(gmean,(ginfo[1],ginfo[2]))
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
+    ############# correct the center of each coarse band if instrument is mwa ######################
+    if opts.instru == 'mwa':
+        for a in g2[p[0]].keys():
+            for ff in range(0,384):
+                if ff%16==8:
+                    g2[p[0]][a][:,ff] = (g2[p[0]][a][:,ff-1]+g2[p[0]][a][:,ff+1])/2
     ############# To rescale solutions if not remove degen ####################
     if not opts.removedegen:
         g_rescale = 0
         ncount = 0
         flag = numpy.zeros((ginfo[1],ginfo[2]),dtype=bool)
         if opts.calpar.endswith('.sav'):
-            blacklist = [0,8,15]
+            blacklist = [0,15]
             for ki in range(0,384):
                 if ki%16 in blacklist: flag[:,ki] = True
             flag[0] = True
