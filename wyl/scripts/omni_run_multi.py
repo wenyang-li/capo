@@ -210,12 +210,12 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
                 if ff%16==8:
                     g2[p[0]][a][:,ff] = (g2[p[0]][a][:,ff-1]+g2[p[0]][a][:,ff+1])/2
     ############# To rescale solutions if not remove degen ####################
+    if opts.calpar is None: fncalpar = ''
+    else: fncalpar = opts.calpar
     if not opts.removedegen:
         g_rescale = 0
         ncount = 0
         flag = numpy.zeros((ginfo[1],ginfo[2]),dtype=bool)
-        if opts.calpar is None: fncalpar = ''
-        else: fncalpar = opts.calpar
         if fncalpar.endswith('.sav'):
             blacklist = [0,15]
             for ki in range(0,384):
@@ -237,7 +237,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             g2[p[0]][ka] /= (g2[p[0]][refn]/numpy.abs(g2[p[0]][refn]))
         for kb in v2[p].keys():
             v2[p][kb] *= v_rescale
-    if opts.calpar.endswith('.sav'):
+    if fncalpar.endswith('.sav'):
         for key in g0[p[0]].keys():
             if not g2[p[0]].has_key(key):
                 g2[p[0]][key] = g0[p[0]][key]
