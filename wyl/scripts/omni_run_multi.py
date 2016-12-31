@@ -214,6 +214,8 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         g_rescale = 0
         ncount = 0
         flag = numpy.zeros((ginfo[1],ginfo[2]),dtype=bool)
+        if opts.calpar is None: fncalpar = ''
+        else: fncalpar = opts.calpar
         if opts.calpar.endswith('.sav'):
             blacklist = [0,15]
             for ki in range(0,384):
