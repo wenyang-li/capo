@@ -216,7 +216,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         g_rescale = 0
         ncount = 0
         flag = numpy.zeros((ginfo[1],ginfo[2]),dtype=bool)
-        if fncalpar.endswith('.sav'):
+        if opts.instru == 'mwa':#fncalpar.endswith('.sav'):
             blacklist = [0,15]
             for ki in range(0,384):
                 if ki%16 in blacklist: flag[:,ki] = True
@@ -231,10 +231,10 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         g_rescale /= ncount
         g_rescale /= g_scale[p[0]]
         v_rescale = g_rescale*g_rescale
-        refn = min(g2[p[0]].keys())
-        for ka in g2[p[0]].keys(): ### take tile 1001 as reference tile ###
+#        refn = min(g2[p[0]].keys())
+        for ka in g2[p[0]].keys(): 
             g2[p[0]][ka] /= g_rescale
-            g2[p[0]][ka] /= (g2[p[0]][refn]/numpy.abs(g2[p[0]][refn]))
+#            g2[p[0]][ka] /= (g2[p[0]][refn]/numpy.abs(g2[p[0]][refn]))
         for kb in v2[p].keys():
             v2[p][kb] *= v_rescale
     if fncalpar.endswith('.sav'):
