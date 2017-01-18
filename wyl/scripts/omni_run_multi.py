@@ -35,7 +35,7 @@ o.add_option('--iffits', dest='iffits', default=False, action='store_true',
 o.add_option('--removedegen',dest='removedegen',default=False,action='store_true',
              help='A switch to turn remove degen on')
 o.add_option('--instru', dest='instru', default='mwa', type='string',
-             help='instrument type')
+             help='instrument type. Default=mwa')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files

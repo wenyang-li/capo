@@ -12,6 +12,8 @@ o.set_description(__doc__)
 aipy.scripting.add_standard_options(o,pol=True)
 o.add_option('--xtalk',dest='xtalk',default=False,action='store_true',
             help='Toggle: apply xtalk solutions to data. Default=False')
+o.add_option('--fit',dest='fit',default=False,action='store_true',
+             help='Toggle: do a 7th order polyfit to sols over the band. Default=False')
 o.add_option('--omnipath',dest='omnipath',default='%s.npz',type='string',
             help='Format string (e.g. "path/%s.npz", where you actually type the "%s") which converts the input file name to the omnical npz path/file.')
 o.add_option('--npz',dest='npz',default=None,type='string',
@@ -20,8 +22,17 @@ o.add_option('--outtype', dest='outtype', default='uvfits', type='string',
              help='Type of the output file, .uvfits, or miriad, or fhd')
 o.add_option('--intype', dest='intype', default=None, type='string',
              help='Type of the input file, .uvfits or fhd')
+o.add_option('--instru', dest='instru', default='mwa', type='string',
+             help='instrument type. Default=mwa')
 opts,args = o.parse_args(sys.argv[1:])
 
+
+def fit_func(x,z):
+    sum = numpy.zeros((x.size))
+    for ii in range(z.size):
+        sum *= x
+        sum += z[ii]
+    return sum
 
 #File Dictionary
 pols = opts.pol.split(',')
@@ -50,7 +61,10 @@ for f,filename in enumerate(args):
     
     #create an out put filename
     if opts.outtype == 'uvfits':
-        newfile = filename + '_O.uvfits'
+        if opts.fit:
+            newfile = filename + '_fitO.uvfits'
+        else:
+            newfile = filename + '_O.uvfits'
     if os.path.exists(newfile):
         print '    %s exists.  Skipping...' % newfile
         continue
@@ -66,6 +80,7 @@ for f,filename in enumerate(args):
     Nfreqs = uvi.Nfreqs
     Nbls = uvi.Nbls
     pollist = uvi.polarization_array
+    freqs = uvi.freq_array[0]
 
     #find npz for each pol, then apply
     for ip,p in enumerate(pols):
@@ -75,6 +90,24 @@ for f,filename in enumerate(args):
             omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
         print '  Reading and applying:', omnifile
         _,gains,_,xtalk = capo.omni.from_npz(omnifile) #loads npz outputs from omni_run
+#********************** if choose to fit a smooth function to sols ***************************
+        if opts.fit:
+            for key in gains[p[0]].keys():
+                if opts.instru == 'mwa':
+                    fqs,amp = [],[]
+                    gamp = numpy.abs(numpy.mean(gains[p[0]][key][1:53],axis=0))
+                    for nn in range(0,384):
+                        if nn%16 in [0,1,2,13,14,15]: continue
+                        fqs.append(freqs[nn])
+                        amp.append(gamp[nn])
+                    fqs = numpy.array(fqs)
+                    amp = numpy.array(amp)
+                else:
+                    fqs = freqs
+                    amp = numpy.abs(numpy.mean(gains[p[0]][key],axis=0))
+                fit_coeff = numpy.polyfit(fqs,amp,7)
+                gains[p[0]][key] = gains[p[0]][key]/numpy.abs(gains[p[0]][key])*fit_func(freqs,fit_coeff)
+#*********************************************************************************************
         pid = numpy.where(pollist == aipy.miriad.str2pol[p])[0][0]
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
