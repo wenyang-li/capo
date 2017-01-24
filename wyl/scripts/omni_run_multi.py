@@ -29,11 +29,13 @@ o.add_option('--tave', dest='tave', default=False, action='store_true',
 o.add_option('--gave', dest='gave', default=False, action='store_true',
              help='choose to average solution over time after calibration or not')
 o.add_option('--iftxt', dest='iftxt', default=False, action='store_true',
-            help='A switch to write the npz info to a ucla format txt file or not')
+            help='Toggle: write the npz info to a ucla format txt file or not')
 o.add_option('--iffits', dest='iffits', default=False, action='store_true',
-            help='A switch to write the npz info to a ucla format fits file or not')
+            help='Toggle: write the npz info to a ucla format fits file or not')
 o.add_option('--removedegen',dest='removedegen',default=False,action='store_true',
-             help='A switch to turn remove degen on')
+             help='Toggle: turn removedegen on')
+o.add_option('--initauto',dest='initauto',default=False,action='store_true',
+             help='Toggle: use auto_corr as initial guess for gains')
 o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
 opts,args = o.parse_args(sys.argv[1:])
@@ -143,40 +145,46 @@ for filename in args:
     else:
         raise IOError('invalid filetype, it should be miriad, uvfits, or fhd')
 
+exec('from %s import antpos'% opts.cal)
+
 #################################################################################################
-def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, polar, cal, calpar]
+def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol, auto_corr]
     filename = infodict['filename']
     g0 = infodict['g0']
-    pos = infodict['position']
     p = infodict['pol']
     d = infodict['data']
     f = infodict['flag']
     ginfo = infodict['ginfo']
     freqs = infodict['freqs']
     timeinfo = infodict['timeinfo']
-    calpar = infodict['calpar']
     ex_ants = infodict['ex_ants']
+    auto = infodict['auto_corr']
     print 'Getting reds from calfile'
     print 'generating info:'
     filter_length = None
     if not opts.flength == None: filter_length = float(opts.flength)
-    info = capo.omni.pos_to_info(pos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[p])
+    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[p])
 
     ### Omnical-ing! Loop Through Compressed Files ###
 
     print '   Calibrating ' + p + ': ' + filename
     
     #if txt file or first cal is not provided, g0 is initiated here, with all of them to be 1.0
-    if calpar == None:
+    if opts.calpar == None:
         if not g0.has_key(p[0]): g0[p[0]] = {}
         for iant in range(0, ginfo[0]):
-            if opts.tave: g0[p[0]][iant] = numpy.ones((1,ginfo[2]))
-            else: g0[p[0]][iant] = numpy.ones((ginfo[1],ginfo[2]))
-    elif calpar.endswith('.npz') or calpar.endswith('.sav'):
+            g0[p[0]][iant] = numpy.ones((1,ginfo[2]))
+            if opts.initauto: g0[p[0]][iant] *= auto[iant]
+            if opts.tave: g0[p[0]][iant] = numpy.mean(g0[p[0]][iant],axis=0)
+    elif opts.calpar.endswith('.sav'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
             g0[p[0]][key] = numpy.resize(g0_temp,(ginfo[1],ginfo[2]))
-
+    elif opts.calpar.endswith('.npz'):
+        for key in g0[p[0]].keys():
+            g0_temp = g0[p[0]][key]
+            g0[p[0]][key] = numpy.resize(g0_temp,(ginfo[1],ginfo[2]))
+            if opts.initauto: g0[p[0]][key] *= auto[key]
 
     t_jd = timeinfo['times']
     t_lst = timeinfo['lsts']
@@ -209,7 +217,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             for ff in range(0,384):
                 if ff%16==8:
                     g2[p[0]][a][:,ff] = (g2[p[0]][a][:,ff-1]+g2[p[0]][a][:,ff+1])/2
-    ############# To rescale solutions if not remove degen ####################
+    ############# To rescale solutions if not removedegen ####################
     if opts.calpar is None: fncalpar = ''
     else: fncalpar = opts.calpar
     if not opts.removedegen:
@@ -257,7 +265,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     return npzname
 #######################################################################################################
 
-exec('from %s import antpos as _antpos'% opts.cal)
 for f,filename in enumerate(args):
 
     npzlist = []
@@ -282,8 +289,6 @@ for f,filename in enumerate(args):
         else:
             infodict[p]['g0'] = {}
             infodict[p]['g0'][p[0]] = g0[p[0]]
-        infodict[p]['calpar'] = opts.calpar
-        infodict[p]['position'] = _antpos
         if opts.ba:
             for a in opts.ba.split(','):
                 if not int(a) in infodict[p]['ex_ants']:

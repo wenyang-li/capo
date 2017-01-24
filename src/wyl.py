@@ -285,8 +285,8 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
         npol = len(pol)
         data = uvdata.data_array
         flag = uvdata.flag_array
-        ant1 = uvdata.ant_1_array
-        ant2 = uvdata.ant_2_array
+        ant1 = uvdata.ant_1_array[:nbl]
+        ant2 = uvdata.ant_2_array[:nbl]
         
         #        if not (0 in ant1 or 0 in ant2):          #if the index starts from 1
         #            ones = np.ones((len(ant1)))
@@ -309,15 +309,17 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
         nbl -= (auto + exconj)
         nant = int((1+math.sqrt(1+8*nbl))/2)
         ex_ant = find_ex_ant(uvdata)
-
         for jj in range(0,npol):
+            auto_corr = {}
             pp = aipy.miriad.pol2str[pol[jj]]
             if not pp in p_list: continue
             infodict[pp] = {}
             dat, flg = {},{}
             for ii in range(0,uvdata.Nbls):
                 if ant1[ii] < 0: continue
-                if ant1[ii] == ant2[ii] and antstr == 'cross': continue
+                if ant1[ii] == ant2[ii]:
+                    auto_corr[ant1[ii]] = np.sqrt(data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii].real)
+                    continue
                 bl = (ant1[ii],ant2[ii])
                 if not dat.has_key(bl): dat[bl],flg[bl] = {},{}
                 if not dat[bl].has_key(pp):
@@ -339,6 +341,7 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
             infodict[pp]['freqs'] = freqarr
             infodict[pp]['pol'] = pp
             infodict[pp]['ex_ants'] = ex_ant
+            infodict[pp]['auto_corr'] = auto_corr
         infodict['name_dict'] = {}
         for ii in range(0,uvdata.Nants_telescope):
             if not infodict['name_dict'].has_key(uvdata.antenna_numbers[ii]):
