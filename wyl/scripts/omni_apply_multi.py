@@ -14,6 +14,8 @@ o.add_option('--xtalk',dest='xtalk',default=False,action='store_true',
             help='Toggle: apply xtalk solutions to data. Default=False')
 o.add_option('--fit',dest='fit',default=False,action='store_true',
              help='Toggle: do a 7th order polyfit to sols over the band. Default=False')
+o.add_option('--amp',dest='amp',default=False,action='store_true',
+             help='Toggle: apply only amplitude solutions)
 o.add_option('--omnipath',dest='omnipath',default='%s.npz',type='string',
             help='Format string (e.g. "path/%s.npz", where you actually type the "%s") which converts the input file name to the omnical npz path/file.')
 o.add_option('--npz',dest='npz',default=None,type='string',
@@ -61,10 +63,12 @@ for f,filename in enumerate(args):
     
     #create an out put filename
     if opts.outtype == 'uvfits':
+        suffix = 'O'
         if opts.fit:
-            newfile = filename + '_fitO.uvfits'
-        else:
-            newfile = filename + '_O.uvfits'
+            suffix = 'fit' + suffix
+        if opts.amp:
+            suffix = suffix + 'amp'
+        newfile = filename + '_' + suffix + '.uvfits'
     if os.path.exists(newfile):
         print '    %s exists.  Skipping...' % newfile
         continue
@@ -120,10 +124,16 @@ for f,filename in enumerate(args):
                 except(KeyError):
                     try: uvi.data_array[:,0][:,:,pid][ii] -= xtalk[p][(a2,a1)].conj()
                     except(KeyError): pass
-            try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p1][a1][ti]
-            except(KeyError): pass
-            try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p2][a2][ti].conj()
-            except(KeyError): pass
+            if opts.amp:
+                try: uvi.data_array[:,0][:,:,pid][ii] /= numpy.abs(gains[p1][a1][ti])
+                except(KeyError): pass
+                try: uvi.data_array[:,0][:,:,pid][ii] /= numpy.abs(gains[p2][a2][ti])
+                except(KeyError): pass
+            else:
+                try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p1][a1][ti]
+                except(KeyError): pass
+                try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p2][a2][ti].conj()
+                except(KeyError): pass
 
     #write file
 #uvi.history = ''
