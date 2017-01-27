@@ -15,7 +15,7 @@ o.add_option('--xtalk',dest='xtalk',default=False,action='store_true',
 o.add_option('--fit',dest='fit',default=False,action='store_true',
              help='Toggle: do a 7th order polyfit to sols over the band. Default=False')
 o.add_option('--amp',dest='amp',default=False,action='store_true',
-             help='Toggle: apply only amplitude solutions)
+             help='Toggle: apply only amplitude solutions')
 o.add_option('--omnipath',dest='omnipath',default='%s.npz',type='string',
             help='Format string (e.g. "path/%s.npz", where you actually type the "%s") which converts the input file name to the omnical npz path/file.')
 o.add_option('--npz',dest='npz',default=None,type='string',
