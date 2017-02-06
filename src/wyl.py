@@ -351,3 +351,66 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
     return infodict
 
 
+def polyfunc(x,z):
+    sum = np.zeros((x.size))
+    for ii in range(z.size):
+        sum *= x
+        sum += z[ii]
+    return sum
+
+
+def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1):
+    for p in gains.keys():
+        bandpass = {}
+        for ant in gains[p].keys():
+            cable = antpos[ant]['cable']
+            if not bandpass.has_key(cable): bandpass[cable] = {}
+            bandpass[cable][ant] = np.mean(gains[p][ant][1:53],axis=0)
+            SH = gains[p][ant].shape
+        global_bp = {}
+        freq = np.arange(384)
+        fuse = []
+        for ii in range(384):
+            if not ii%16 in [0,15]: fuse.append(ii)
+        for length in bandpass.keys():
+            amp = []
+            for ant in bandpass[length].keys():
+                normbp = np.abs(bandpass[length][ant])/np.mean(np.abs(bandpass[length][ant]))
+                amp.append(normbp)
+            amp = np.array(amp)
+            global_bp[length] = np.mean(amp,axis=0)
+        residual = {}
+        for length in global_bp.keys():
+            residual[length] = {}
+            for ant in bandpass[length].keys():
+                residual[length][ant] = bandpass[length][ant]/global_bp[length]
+        fitamp,fitphs = {},{}
+        for length in residual.keys():
+            for ant in residual[length].keys():
+                x = np.array(fuse)
+                y1 = np.abs(residual[length][ant][fuse])
+                y2 = np.angle(residual[length][ant][fuse])
+                for nn in range(y2.size-1):
+                    if y2[nn+1] - y2[nn] > np.pi: y2[nn+1] -= 2*np.pi
+                    if y2[nn+1] - y2[nn] < -np.pi: y2[nn+1] += 2*np.pi
+                z1 = np.polyfit(x,y1,amp_order)
+                z2 = np.polyfit(x,y2,phs_order)
+                fitamp[ant] = z1
+                fitphs[ant] = z2
+        for length in bandpass.keys():
+            for ant in bandpass[length].keys():
+                g = global_bp[length]*polyfunc(freq,fitamp[ant])*np.exp(1j*polyfunc(freq,fitphs[ant]))
+                gains[p][ant] = np.resize(g,SH)
+        return gains
+
+
+
+
+
+
+
+
+
+
+
+

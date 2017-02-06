@@ -9,13 +9,11 @@ import uvdata.uvdata as uvd
 o = optparse.OptionParser()
 o.set_usage('omni_apply_fhd.py [options] obsid(do not include .uvfits) or zen.jds.pol.uv')
 o.set_description(__doc__)
-aipy.scripting.add_standard_options(o,pol=True)
+aipy.scripting.add_standard_options(o,pol=True,cal=True)
 o.add_option('--xtalk',dest='xtalk',default=False,action='store_true',
             help='Toggle: apply xtalk solutions to data. Default=False')
 o.add_option('--fit',dest='fit',default=False,action='store_true',
-             help='Toggle: do a 7th order polyfit to sols over the band. Default=False')
-o.add_option('--amp',dest='amp',default=False,action='store_true',
-             help='Toggle: apply only amplitude solutions')
+             help='Toggle: do a global bp fit to sols. Default=False')
 o.add_option('--omnipath',dest='omnipath',default='%s.npz',type='string',
             help='Format string (e.g. "path/%s.npz", where you actually type the "%s") which converts the input file name to the omnical npz path/file.')
 o.add_option('--npz',dest='npz',default=None,type='string',
@@ -26,15 +24,10 @@ o.add_option('--intype', dest='intype', default=None, type='string',
              help='Type of the input file, .uvfits or fhd')
 o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
+o.add_option('--plot',dest='plot',default=False,action='store_true',
+             help='Toggle: Plot fitted bandpass if fit is on. Default=False')
 opts,args = o.parse_args(sys.argv[1:])
 
-
-def fit_func(x,z):
-    sum = numpy.zeros((x.size))
-    for ii in range(z.size):
-        sum *= x
-        sum += z[ii]
-    return sum
 
 #File Dictionary
 pols = opts.pol.split(',')
@@ -66,8 +59,6 @@ for f,filename in enumerate(args):
         suffix = 'O'
         if opts.fit:
             suffix = 'fit' + suffix
-        if opts.amp:
-            suffix = suffix + 'amp'
         newfile = filename + '_' + suffix + '.uvfits'
     if os.path.exists(newfile):
         print '    %s exists.  Skipping...' % newfile
@@ -94,23 +85,11 @@ for f,filename in enumerate(args):
             omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
         print '  Reading and applying:', omnifile
         _,gains,_,xtalk = capo.omni.from_npz(omnifile) #loads npz outputs from omni_run
-#********************** if choose to fit a smooth function to sols ***************************
-        if opts.fit:
-            for key in gains[p[0]].keys():
-                if opts.instru == 'mwa':
-                    fqs,amp = [],[]
-                    gamp = numpy.abs(numpy.mean(gains[p[0]][key][1:53],axis=0))
-                    for nn in range(0,384):
-                        if nn%16 in [0,1,2,13,14,15]: continue
-                        fqs.append(freqs[nn])
-                        amp.append(gamp[nn])
-                    fqs = numpy.array(fqs)
-                    amp = numpy.array(amp)
-                else:
-                    fqs = freqs
-                    amp = numpy.abs(numpy.mean(gains[p[0]][key],axis=0))
-                fit_coeff = numpy.polyfit(fqs,amp,7)
-                gains[p[0]][key] = gains[p[0]][key]/numpy.abs(gains[p[0]][key])*fit_func(freqs,fit_coeff)
+#********************** if choose to make sols smooth ***************************
+        if opts.fit and opts.instru == 'mwa':
+            print '   bandpass fitting'
+            exec('from %s import antpos'% opts.cal)
+            gains = capo.wyl.mwa_bandpass_fit(gains,antpos)
 #*********************************************************************************************
         pid = numpy.where(pollist == aipy.miriad.str2pol[p])[0][0]
         for ii in range(0,Nblts):
@@ -124,16 +103,10 @@ for f,filename in enumerate(args):
                 except(KeyError):
                     try: uvi.data_array[:,0][:,:,pid][ii] -= xtalk[p][(a2,a1)].conj()
                     except(KeyError): pass
-            if opts.amp:
-                try: uvi.data_array[:,0][:,:,pid][ii] /= numpy.abs(gains[p1][a1][ti])
-                except(KeyError): pass
-                try: uvi.data_array[:,0][:,:,pid][ii] /= numpy.abs(gains[p2][a2][ti])
-                except(KeyError): pass
-            else:
-                try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p1][a1][ti]
-                except(KeyError): pass
-                try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p2][a2][ti].conj()
-                except(KeyError): pass
+            try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p1][a1][ti]
+            except(KeyError): pass
+            try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p2][a2][ti].conj()
+            except(KeyError): pass
 
     #write file
 #uvi.history = ''
