@@ -3,6 +3,7 @@ import uvdata.uvdata as uvd
 import subprocess, datetime, os
 from astropy.io import fits
 from uv_data_only import *
+import copy
 
 def output_mask_array(filename, filetype, flag_array):
     outfn = ''
@@ -403,14 +404,128 @@ def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1):
                 gains[p][ant] = np.resize(g,SH)
         return gains
 
+def ampproj(omni,fhd):
+    amppar = {}
+    for p in omni.keys():
+        s1,s2 = 0,0
+        for a in omni[p].keys():
+            s1 += np.abs(omni[p][a]*omni[p][a].conj())*np.abs(fhd[p][a]*fhd[p][a].conj())
+            s2 += np.abs(omni[p][a]*omni[p][a].conj())*np.abs(omni[p][a]*omni[p][a].conj())
+        A = s1/s2
+        amppar[p] = np.sqrt(A)
+    return amppar
 
+def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
+    phspar = {}
+    ax1,ax2 = [],[]
+    for ii in range(EastHex.shape[0]):
+        ind_east = np.where(EastHex[ii]>0)[0]
+        ind_south = np.where(SouthHex[ii]>0)[0]
+        ax1.append(EastHex[ii][ind_east])
+        ax1.append(SouthHex[ii][ind_south])
+    for jj in range(EastHex.shape[1]):
+        ind_east = np.where(EastHex[:,jj]>0)[0]
+        ind_south = np.where(SouthHex[:,jj]>0)[0]
+        ax2.append(EastHex[:,jj][ind_east])
+        ax2.append(SouthHex[:,jj][ind_south])
+    for p in omni.keys():
+        phspar[p] = {}
+        slp1 = []
+        slp2 = []
+        for ff in range(0,384):
+            if ff%16 in [0,15]:
+                slp1.append(0)
+                slp2.append(0)
+                continue
+            #***** East-West direction fit *****#
+            slope = []
+            for inds in ax1:
+                x,tau = [],[]
+                for ii in inds:
+                    if not ii in omni[p].keys(): continue
+                    x.append(realpos[ii]['top_x'])
+                    tau.append(np.angle(fhd[p][ii][ff]/omni[p][ii][ff]))
+                tau = np.unwrap(tau)
+                if tau.size < 3: continue
+                z = np.polyfit(x,tau,1)
+                slope.append(z[0])
+            slope = np.array(slope)
+            slp1.append(np.mean(slope))
+            #***** 60 deg East-South direction fit *****#
+            slope = []
+            for inds in ax2:
+                x,tau = [],[]
+                for ii in inds:
+                    if not ii in omni[p].keys(): continue
+                    x.append(realpos[ii]['top_x'])
+                    tau.append(np.angle(fhd[p][ii][ff]/omni[p][ii][ff]))
+                tau = np.unwrap(tau)
+                if tau.size < 3: continue
+                z = np.polyfit(x,tau,1)
+                slope.append(z[0])
+            slope = np.array(slope)
+            slp2.append(np.mean(slope))
+        #****** calculate offset term ************#
+        offset1, offset2 = [],[]
+        phix = np.array(slp1)
+        phiy = (np.array(slp2) - phix)/np.sqrt(3)
+        for a in omni[p].keys():
+            dx = realpos[a]['top_x'] - realpos[ref_antenna]['top_x']
+            dy = realpos[a]['top_y'] - realpos[ref_antenna]['top_y']
+            proj = np.exp(1j*(dx*phix+dy*phiy))
+            offset = np.angle(fhd[p][a]/omni[p][a]/proj)
+            if a < 92: offset1.append(offset)
+            else: offset2.append(offset)
+        offset1 = np.array(offset1)
+        offset2 = np.array(offset2)
+        offset1 = np.mean(offset1,axis=0)
+        offset2 = np.mean(offset2,axis=0)
+        phspar[p]['phix'] = phix
+        phspar[p]['phiy'] = phiy
+        phspar[p]['offset_east'] = offset1
+        phspar[p]['offset_south'] = offset2
+    return phspar
 
-
-
-
-
-
-
-
-
-
+def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
+    fuse = []
+    for ii in range(0,384):
+        if not ii%16 in [0,15]: fuse.append(ii)
+    proj = {}
+    for p in omni.keys():
+        proj[p] = {}
+        M = np.zeros((3,3))
+        n = len(omni[p].keys())
+        r = {}
+        proj[p]['eta'] = 0
+        proj[p]['phix'] = 0
+        proj[p]['phiy'] = 0
+        proj[p]['offset'] = 0
+        for a in omni[p].keys():
+            r[a] = fhd[p][a]/omni[p][a]
+            x = realpos[a]['top_x']/100
+            y = realpos[a]['top_y']/100
+            M += np.array([[x*x,x*y,x],
+                           [x*y,y*y,y],
+                           [x,  y,  1]])
+        invM = np.linalg.inv(M)
+        for ii in range(0,maxiter):
+            b = np.zeros((3,384))
+            eta = 0
+            for a in omni[p].keys():
+                b += np.array([x*r[a].imag,y*r[a].imag,r[a].imag])
+                eta += (r.real-1)
+            eta /= n
+            phs = invM.dot(b)
+            if np.max((eta*eta)[fuse])+np.max((phs*phs)[:,fuse]) < conv:
+                print 'maxiter: ',ii
+                break
+            proj[p]['eta'] += eta
+            proj[p]['phix'] += phs[0]
+            proj[p]['phiy'] += phs[1]
+            proj[p]['offset'] += phs[2]
+            for a in omni[p].keys():
+                x = realpos[a]['top_x']/100
+                y = realpos[a]['top_y']/100
+                factor = np.exp(eta+1j*(x*phs[0]+y*phs[1]+phs[2]))
+                r[a] /= factor
+    return proj

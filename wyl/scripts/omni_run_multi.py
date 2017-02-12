@@ -1,6 +1,6 @@
 #! /usr/bin/env python
-
-import omnical, aipy, numpy, capo
+import numpy as np
+import omnical, aipy, capo
 import optparse, os, sys, glob
 from astropy.io import fits
 import pickle
@@ -38,6 +38,10 @@ o.add_option('--initauto',dest='initauto',default=False,action='store_true',
              help='Toggle: use auto_corr as initial guess for gains')
 o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
+o.add_option('--projdegen', dest='projdegen', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0_2/calibration/', type='string',
+             help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
+o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
+             help='Toggle: project degeneracy to fitted fhd solutions')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -75,7 +79,7 @@ if opts.calpar != None: #create g0 if txt file is provided
             g0[temp3[0][0]][temp3[1]].append(gg.conjugate()/abs(gg))
         for pp in g0.keys():
             for ant in g0[pp].keys():
-                g0[pp][ant] = numpy.array(g0[pp][ant])
+                g0[pp][ant] = np.array(g0[pp][ant])
                 g0[pp][ant] = g0[pp][ant].reshape(len(Ntimes),len(Nfreqs))
     elif fname.endswith('.npz'):
         for pp,p in enumerate(pols):
@@ -84,28 +88,28 @@ if opts.calpar != None: #create g0 if txt file is provided
             fpname[-3] = p
             fpname = '.'.join(fpname)
             print '   Reading: ', fpname
-            cp = numpy.load(fpname)
+            cp = np.load(fpname)
             for i in cp.keys():
                 if i[0].isdigit():
-                    g0[p[0]][int(i[:-1])] = cp[i] / numpy.abs(cp[i])
+                    g0[p[0]][int(i[:-1])] = cp[i] / np.abs(cp[i])
     elif fname.endswith('.fits'):
         g0 = capo.omni.fc_gains_from_fits(opts.calpar)
         for key1 in g0:
             for key2 in g0[key1]:
-                g0[key1][key2] /= numpy.abs(g0[key1][key2])
+                g0[key1][key2] /= np.abs(g0[key1][key2])
     elif fname.endswith('.sav'):
         cal = readsav(opts.calpar,python_dict=True)
-        fqfl = numpy.zeros((128,384),dtype=bool)
+        fqfl = np.zeros((128,384),dtype=bool)
         for ff in range(384):
             if ff%16==0 or ff%16==15: fqfl[:,ff]=True
         g = cal['cal']['GAIN'][0]
         g0['x'] = {}
         g0['y'] = {}
-        gx = numpy.ma.masked_array(g[0],fqfl,fill_value=1.0)
-        gy = numpy.ma.masked_array(g[1],fqfl,fill_value=1.0)
-        gnan = numpy.where(numpy.isnan(numpy.mean(gx,axis=1)))[0]
-        g_scale['x'] = numpy.nanmean(numpy.abs(gx[56:-1]))
-        g_scale['y'] = numpy.nanmean(numpy.abs(gy[56:-1]))
+        gx = np.ma.masked_array(g[0],fqfl,fill_value=1.0)
+        gy = np.ma.masked_array(g[1],fqfl,fill_value=1.0)
+        gnan = np.where(np.isnan(np.mean(gx,axis=1)))[0]
+        g_scale['x'] = np.nanmean(np.abs(gx[56:-1]))
+        g_scale['y'] = np.nanmean(np.abs(gy[56:-1]))
         for nn in gnan:
             gx[nn] = g_scale['x']
             gy[nn] = g_scale['y']
@@ -115,7 +119,17 @@ if opts.calpar != None: #create g0 if txt file is provided
     else:
         raise IOError('invalid calpar file')
 
-#if not provided, will initiate g0 with units in the reading file part
+if opts.instru == 'mwa' and not opts.projdegen is None:
+    fhd_cal = readsav(opts.projdegen+args[0]+'_cal.sav')
+    gfhd = {'x':{},'y':{}}
+    if opts.fitdegen:
+        for a in range(fhd_cal['N_TILE'][0]):
+            gfhd['x'][a] = fhd_cal['cal']['GAIN'][0][0][a]
+            gfhd['y'][a] = fhd_cal['cal']['GAIN'][0][1][a]
+    else:
+        for a in range(fhd_cal['N_TILE'][0]):
+            gfhd['x'][a] = fhd_cal['cal']['GAIN'][0][0][a] + fhd_cal['cal']['GAIN_RESIDUAL'][0][0][a]
+            gfhd['y'][a] = fhd_cal['cal']['GAIN'][0][1][a] + fhd_cal['cal']['GAIN_RESIDUAL'][0][1][a]
 
 for filename in args:
     files[filename] = {}
@@ -145,7 +159,7 @@ for filename in args:
     else:
         raise IOError('invalid filetype, it should be miriad, uvfits, or fhd')
 
-exec('from %s import antpos'% opts.cal)
+exec('from %s import *'% opts.cal) # Including antpos, realpos, EastHex, SouthHex
 
 #################################################################################################
 def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol, auto_corr]
@@ -173,17 +187,17 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if opts.calpar == None:
         if not g0.has_key(p[0]): g0[p[0]] = {}
         for iant in range(0, ginfo[0]):
-            g0[p[0]][iant] = numpy.ones((1,ginfo[2]))
+            g0[p[0]][iant] = np.ones((1,ginfo[2]))
             if opts.initauto: g0[p[0]][iant] *= auto[iant]
-            if opts.tave: g0[p[0]][iant] = numpy.mean(g0[p[0]][iant],axis=0)
+            if opts.tave: g0[p[0]][iant] = np.mean(g0[p[0]][iant],axis=0)
     elif opts.calpar.endswith('.sav'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
-            g0[p[0]][key] = numpy.resize(g0_temp,(ginfo[1],ginfo[2]))
+            g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
     elif opts.calpar.endswith('.npz'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
-            g0[p[0]][key] = numpy.resize(g0_temp,(ginfo[1],ginfo[2]))
+            g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
             if opts.initauto: g0[p[0]][key] *= auto[key]
 
     t_jd = timeinfo['times']
@@ -196,20 +210,20 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     wgts[p] = {} #weights dictionary by pol
     for bl in f:
         i,j = bl
-        wgts[p][(j,i)] = wgts[p][(i,j)] = numpy.logical_not(f[bl][p]).astype(numpy.int)
+        wgts[p][(j,i)] = wgts[p][(i,j)] = np.logical_not(f[bl][p]).astype(np.int)
     print '   Logcal-ing' 
     m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen) #SAK CHANGE REMOVEDEGEN
     print '   Lincal-ing'
     m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
     if opts.tave:
         for a in g2[p[0]].keys():
-            g2[p[0]][a] = numpy.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
+            g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
         for bl in v2[p].keys():
-            v2[p][bl] = numpy.resize(v2[p][bl],(ginfo[1],ginfo[2]))
+            v2[p][bl] = np.resize(v2[p][bl],(ginfo[1],ginfo[2]))
     if opts.gave:
         for a in g2[p[0]].keys():
-            gmean = numpy.mean(g2[p[0]][a],axis=0)
-            g2[p[0]][a] = numpy.resize(gmean,(ginfo[1],ginfo[2]))
+            gmean = np.mean(g2[p[0]][a],axis=0)
+            g2[p[0]][a] = np.resize(gmean,(ginfo[1],ginfo[2]))
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
     ############# correct the center of each coarse band if instrument is mwa ######################
     if opts.instru == 'mwa':
@@ -217,38 +231,33 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             for ff in range(0,384):
                 if ff%16==8:
                     g2[p[0]][a][:,ff] = (g2[p[0]][a][:,ff-1]+g2[p[0]][a][:,ff+1])/2
-    ############# To rescale solutions if not removedegen ####################
-    if opts.calpar is None: fncalpar = ''
-    else: fncalpar = opts.calpar
-    if not opts.removedegen:
-        g_rescale = 0
-        ncount = 0
-        flag = numpy.zeros((ginfo[1],ginfo[2]),dtype=bool)
-        if opts.instru == 'mwa':#fncalpar.endswith('.sav'):
-            blacklist = [0,15]
-            for ki in range(0,384):
-                if ki%16 in blacklist: flag[:,ki] = True
-            flag[0] = True
-            flag[53] = True
-            flag[54] = True
-            flag[55] = True
-        for ka in g2[p[0]].keys():
-            gd = numpy.ma.masked_array(numpy.abs(g2[p[0]][ka]),flag)
-            g_rescale += numpy.mean(gd)
-            ncount += 1
-        g_rescale /= ncount
-        g_rescale /= g_scale[p[0]]
-        v_rescale = g_rescale*g_rescale
-#        refn = min(g2[p[0]].keys())
-        for ka in g2[p[0]].keys(): 
-            g2[p[0]][ka] /= g_rescale
-#            g2[p[0]][ka] /= (g2[p[0]][refn]/numpy.abs(g2[p[0]][refn]))
-        for kb in v2[p].keys():
-            v2[p][kb] *= v_rescale
-    if fncalpar.endswith('.sav'):
-        for key in g0[p[0]].keys():
-            if not g2[p[0]].has_key(key):
-                g2[p[0]][key] = g0[p[0]][key]
+    ############# To project out degeneracy parameters ####################
+    if opts.instru == 'mwa' and not opts.projdegen is None:
+        print '   Projecting degeneracy'
+        for a in g2[p[0]].keys():
+            if g2[p[0]][a].ndim == 2 : g2[p[0]][a] = np.mean(g2[p[0]][a][1:53],axis=0)
+        ref = g2[p[0]].keys()[0] # pick a reference tile to reduce the effect of phase wrapping
+        ref_exp = np.exp(1j*np.angle(g2[p[0]][ref]/gfhd[p[0]][ref]))
+        for a in g2[p[0]].keys(): g2[p[0]][a] /= ref_exp
+        print '   projecting amplitude'
+        amppar = capo.wyl.ampproj(g2,gfhd)
+        print '   projecting phase'
+        phspar = capo.wyl.phsproj(g2,gfhd,realpos,EastHex,SouthHex,ref)
+        for a in g2[p[0]].keys():
+            dx = realpos[a]['top_x']-realpos[ref]['top_x']
+            dy = realpos[a]['top_y']-realpos[ref]['top_y']
+            proj = amppar[p[0]]*np.exp(1j*(dx*phspar[p[0]]['phix']+dy*phspar[p[0]]['phiy']))
+            if a < 92: proj *= np.exp(1j*phspar[p[0]]['offset_east'])
+            else: proj *= np.exp(1j*phspar[p[0]]['offset_south'])
+            g2[p[0]][a] *= proj
+        print '   linear projecting'
+        lp = capo.wyl.linproj(g2,gfhd,realpos)
+        for a in g2[p[0]].keys():
+            dx = realpos[a]['top_x']/100
+            dy = realpos[a]['top_y']/100
+            proj = np.exp(lp[p[0]]['eta']+1j*(dx*lp[p[0]]['phix']+dy*lp[p[0]]['phiy']+lp[p[0]]['offset']))
+            g2[p[0]][a] *= proj
+            g2[p[0]][a] = np.resize((ginfo[1],ginfo[2]))
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
