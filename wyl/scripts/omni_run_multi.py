@@ -127,7 +127,7 @@ if opts.instru == 'mwa' and not opts.projdegen is None:
             gfhd['x'][a] = fhd_cal['cal']['GAIN'][0][0][a]
             gfhd['y'][a] = fhd_cal['cal']['GAIN'][0][1][a]
     else:
-        for a in range(fhd_cal['N_TILE'][0]):
+        for a in range(fhd_cal['cal']['N_TILE'][0]):
             gfhd['x'][a] = fhd_cal['cal']['GAIN'][0][0][a] + fhd_cal['cal']['GAIN_RESIDUAL'][0][0][a]
             gfhd['y'][a] = fhd_cal['cal']['GAIN'][0][1][a] + fhd_cal['cal']['GAIN_RESIDUAL'][0][1][a]
 
