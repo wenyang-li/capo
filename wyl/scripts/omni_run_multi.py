@@ -120,10 +120,10 @@ if opts.calpar != None: #create g0 if txt file is provided
         raise IOError('invalid calpar file')
 
 if opts.instru == 'mwa' and not opts.projdegen is None:
-    fhd_cal = readsav(opts.projdegen+args[0]+'_cal.sav')
+    fhd_cal = readsav(opts.projdegen+args[0]+'_cal.sav',python_dict=True)
     gfhd = {'x':{},'y':{}}
     if opts.fitdegen:
-        for a in range(fhd_cal['N_TILE'][0]):
+        for a in range(fhd_cal['cal']['N_TILE'][0]):
             gfhd['x'][a] = fhd_cal['cal']['GAIN'][0][0][a]
             gfhd['y'][a] = fhd_cal['cal']['GAIN'][0][1][a]
     else:
