@@ -448,7 +448,7 @@ def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
                 z = np.polyfit(x,tau,1)
                 slope.append(z[0])
             slope = np.array(slope)
-            slp1.append(np.mean(slope))
+            slp1.append(np.median(slope)) # slope could be steep, choosing median would be more likely to avoid phase wrapping
             #***** 60 deg East-South direction fit *****#
             slope = []
             for inds in ax2:
@@ -462,7 +462,7 @@ def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
                 z = np.polyfit(x,tau,1)
                 slope.append(z[0])
             slope = np.array(slope)
-            slp2.append(np.mean(slope))
+            slp2.append(np.median(slope))
         #****** calculate offset term ************#
         offset1, offset2 = [],[]
         phix = np.array(slp1)
