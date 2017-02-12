@@ -513,7 +513,7 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
             eta = 0
             for a in omni[p].keys():
                 b += np.array([x*r[a].imag,y*r[a].imag,r[a].imag])
-                eta += (r.real-1)
+                eta += (r[a].real-1)
             eta /= n
             phs = invM.dot(b)
             if np.max((eta*eta)[fuse])+np.max((phs*phs)[:,fuse]) < conv:
