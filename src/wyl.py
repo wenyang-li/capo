@@ -391,9 +391,7 @@ def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1):
                 x = np.array(fuse)
                 y1 = np.abs(residual[length][ant][fuse])
                 y2 = np.angle(residual[length][ant][fuse])
-                for nn in range(y2.size-1):
-                    if y2[nn+1] - y2[nn] > np.pi: y2[nn+1] -= 2*np.pi
-                    if y2[nn+1] - y2[nn] < -np.pi: y2[nn+1] += 2*np.pi
+                y2 = np.unwrap(y2)
                 z1 = np.polyfit(x,y1,amp_order)
                 z2 = np.polyfit(x,y2,phs_order)
                 fitamp[ant] = z1
@@ -473,7 +471,7 @@ def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
             dx = realpos[a]['top_x'] - realpos[ref_antenna]['top_x']
             dy = realpos[a]['top_y'] - realpos[ref_antenna]['top_y']
             proj = np.exp(1j*(dx*phix+dy*phiy))
-            offset = np.angle(fhd[p][a]/omni[p][a]/proj)
+            offset = np.exp(1j*np.angle(fhd[p][a]/omni[p][a]/proj))
             if a < 92: offset1.append(offset)
             else: offset2.append(offset)
         offset1 = np.array(offset1)
