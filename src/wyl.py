@@ -361,6 +361,7 @@ def polyfunc(x,z):
 
 
 def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1):
+    fqs = np.linspace(167.075,197.715,384)
     for p in gains.keys():
         bandpass = {}
         for ant in gains[p].keys():
@@ -397,9 +398,25 @@ def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1):
                 fitamp[ant] = z1
                 fitphs[ant] = z2
         for length in bandpass.keys():
-            for ant in bandpass[length].keys():
-                g = global_bp[length]*polyfunc(freq,fitamp[ant])*np.exp(1j*polyfunc(freq,fitphs[ant]))
-                gains[p][ant] = np.resize(g,SH)
+            if length == 150:
+                for ant in bandpass[length].keys():
+                    g = global_bp[length]*polyfunc(freq,fitamp[ant])*np.exp(1j*polyfunc(freq,fitphs[ant]))
+                    r = np.mean(gains[p][ant][1:53],axis=0)/g - 1
+                    for ii in range(0,384):
+                        if ii%16 == 0: r[ii] = r[ii+1]
+                        if ii%16 ==15: r[ii] = r[ii-1]
+                    tau = np.fft.fftfreq(384,(fqs[-1]-fqs[0])/384)
+                    delay = np.fft.fft(r,n=384)
+                    inds = np.where(abs(np.abs(tau)-1)<0.3)[0]
+                    ind = np.where(np.abs(delay)==np.max(np.abs(delay[inds])))[0]
+                    for ii in range(delay.size):
+                        if not ii in ind: delay[ii] = 0
+                    reflect = np.fft.ifft(delay,n=384) + 1
+                    gains[p][ant] = np.resize(g*reflect,SH)
+            else:
+                for ant in bandpass[length].keys():
+                    g = global_bp[length]*polyfunc(freq,fitamp[ant])*np.exp(1j*polyfunc(freq,fitphs[ant]))
+                    gains[p][ant] = np.resize(g,SH)
         return gains
 
 def ampproj(omni,fhd):

@@ -252,6 +252,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             g2[p[0]][a] *= proj
         print '   linear projecting'
         lp = capo.wyl.linproj(g2,gfhd,realpos)
+        fflag = []
+        for ii in range(384):
+            if ii%16 in [0,15]: fflag.append(ii)
         for a in g2[p[0]].keys():
             dx = realpos[a]['top_x']/100
             dy = realpos[a]['top_y']/100
