@@ -91,6 +91,13 @@ for f,filename in enumerate(args):
             exec('from %s import antpos'% opts.cal)
             gains = capo.wyl.mwa_bandpass_fit(gains,antpos)
 #*********************************************************************************************
+        fqs = np.ones((freqs.size))
+        fuse = np.arange(freqs.size)
+        if opts.instru == 'mwa':
+            fuse = []
+            for ii in range(384):
+                if ii%16 in [0,15]: fqs[ii] = 0
+                else: fuse.append[ii]
         pid = numpy.where(pollist == aipy.miriad.str2pol[p])[0][0]
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
@@ -103,9 +110,13 @@ for f,filename in enumerate(args):
                 except(KeyError):
                     try: uvi.data_array[:,0][:,:,pid][ii] -= xtalk[p][(a2,a1)].conj()
                     except(KeyError): pass
-            try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p1][a1][ti]
+            try:
+                uvi.data_array[:,0][:,:,pid][ii][fuse] /= gains[p1][a1][ti][fuse]
+                uvi.data_array[:,0][:,:,pid][ii] *= fqs
             except(KeyError): pass
-            try: uvi.data_array[:,0][:,:,pid][ii] /= gains[p2][a2][ti].conj()
+            try:
+                uvi.data_array[:,0][:,:,pid][ii][fuse] /= gains[p2][a2][ti][fuse].conj()
+                uvi.data_array[:,0][:,:,pid][ii] *= fqs
             except(KeyError): pass
 
     #write file

@@ -225,12 +225,14 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             gmean = np.mean(g2[p[0]][a],axis=0)
             g2[p[0]][a] = np.resize(gmean,(ginfo[1],ginfo[2]))
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
-    ############# correct the center of each coarse band if instrument is mwa ######################
+    ############# correct the center of each coarse band and coarse band edge if instrument is mwa ######################
     if opts.instru == 'mwa':
         for a in g2[p[0]].keys():
             for ff in range(0,384):
                 if ff%16==8:
                     g2[p[0]][a][:,ff] = (g2[p[0]][a][:,ff-1]+g2[p[0]][a][:,ff+1])/2
+                if ff%16 in [0,15]:
+                    g2[p[0]][a][:,ff] = 0
     ############# To project out degeneracy parameters ####################
     if opts.instru == 'mwa' and not opts.projdegen is None:
         print '   Projecting degeneracy'
