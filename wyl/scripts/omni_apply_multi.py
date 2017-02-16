@@ -1,7 +1,8 @@
 #! /usr/bin/env python
 # Do not support miriad
 
-import omnical, aipy, numpy, capo
+import numpy as np
+import omnical, aipy, capo
 import pickle, optparse, os, sys, glob
 import uvdata.uvdata as uvd
 
@@ -98,7 +99,7 @@ for f,filename in enumerate(args):
             for ii in range(384):
                 if ii%16 in [0,15]: fqs[ii] = 0
                 else: fuse.append[ii]
-        pid = numpy.where(pollist == aipy.miriad.str2pol[p])[0][0]
+        pid = np.where(pollist == aipy.miriad.str2pol[p])[0][0]
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
             a2 = uvi.ant_2_array[ii]
