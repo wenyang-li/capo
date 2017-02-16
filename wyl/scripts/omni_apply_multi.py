@@ -98,7 +98,7 @@ for f,filename in enumerate(args):
             fuse = []
             for ii in range(384):
                 if ii%16 in [0,15]: fqs[ii] = 0
-                else: fuse.append[ii]
+                else: fuse.append(ii)
         pid = np.where(pollist == aipy.miriad.str2pol[p])[0][0]
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
