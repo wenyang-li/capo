@@ -261,7 +261,8 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             g2[p[0]][a] *= proj
             g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
             for ff in range(384):
-                g2[p[0]][a][:,ff] = 0    #clean nans
+                if ff%16 in [0,15]:
+                    g2[p[0]][a][:,ff] = 0    #clean nans
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
