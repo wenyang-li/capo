@@ -360,8 +360,11 @@ def polyfunc(x,z):
     return sum
 
 
-def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1):
-    fqs = np.linspace(167.075,197.715,384)
+def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1, band = 'high'):
+    if band.lower() == 'high':
+        fqs = np.linspace(167.075,197.715,384)
+    elif band.lower() == 'low':
+        fqs = np.linspace(138.995,169.635,384)
     for p in gains.keys():
         bandpass = {}
         for ant in gains[p].keys():
@@ -377,7 +380,7 @@ def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1):
         for length in bandpass.keys():
             amp = []
             for ant in bandpass[length].keys():
-                normbp = np.abs(bandpass[length][ant])/np.mean(np.abs(bandpass[length][ant]))
+                normbp = np.abs(bandpass[length][ant])/np.mean(np.abs(bandpass[length][ant][fuse]))
                 amp.append(normbp)
             amp = np.array(amp)
             global_bp[length] = np.mean(amp,axis=0)
