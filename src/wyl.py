@@ -428,6 +428,24 @@ def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1, band = 'high'):
                     gains[p][ant] = np.resize(g,SH)
         return gains
 
+def poly_bandpass_fit(gains,amp_order=9, phs_order=1,instru='mwa'):
+    for p in gains.keys():
+        for a in gains[p].keys():
+            SH = gains[p][a].shape
+            g = np.mean(gains[p][a],axis=0)
+            fqs = np.arange(g.size)
+            fuse = []
+            for ff in range(g.size):
+                if instru=='mwa' and ff%16 in [0,15]: continue
+                fuse.append(ff)
+            fuse = np.array(fuse)
+            z1 = np.polyfit(fuse,np.abs(g)[fuse],amp_order)
+            z2 = np.polyfit(fuse,np.unwrap(np.angle(g)[fuse]),phs_order)
+            gains[p][a] = polyfunc(fqs,z1)*np.exp(1j*polyfunc(fqs,z2))
+            gains[p][a] = np.resize(gains[p][a],SH)
+    return gains
+
+
 def ampproj(omni,fhd):
     amppar = {}
     for p in omni.keys():

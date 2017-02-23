@@ -13,8 +13,10 @@ o.set_description(__doc__)
 aipy.scripting.add_standard_options(o,pol=True,cal=True)
 o.add_option('--xtalk',dest='xtalk',default=False,action='store_true',
             help='Toggle: apply xtalk solutions to data. Default=False')
-o.add_option('--fit',dest='fit',default=False,action='store_true',
+o.add_option('--bpfit',dest='bpfit',default=False,action='store_true',
              help='Toggle: do a global bp fit to sols. Default=False')
+o.add_option('--polyfit',dest='polyfit',default=False,action='store_true',
+             help='Toggle: do a polyfit to sols over the band. Default=False')
 o.add_option('--omnipath',dest='omnipath',default='%s.npz',type='string',
             help='Format string (e.g. "path/%s.npz", where you actually type the "%s") which converts the input file name to the omnical npz path/file.')
 o.add_option('--npz',dest='npz',default=None,type='string',
@@ -58,8 +60,10 @@ for f,filename in enumerate(args):
     #create an out put filename
     if opts.outtype == 'uvfits':
         suffix = 'O'
-        if opts.fit:
-            suffix = 'fit' + suffix
+        if opts.bpfit:
+            suffix = 'bpfit' + suffix
+        if opts.polyfit:
+            suffix = 'polyfit' + suffix
         newfile = filename + '_' + suffix + '.uvfits'
     if os.path.exists(newfile):
         print '    %s exists.  Skipping...' % newfile
@@ -87,10 +91,13 @@ for f,filename in enumerate(args):
         print '  Reading and applying:', omnifile
         _,gains,_,xtalk = capo.omni.from_npz(omnifile) #loads npz outputs from omni_run
 #********************** if choose to make sols smooth ***************************
-        if opts.fit and opts.instru == 'mwa':
+        if opts.bpfit and opts.instru == 'mwa':
             print '   bandpass fitting'
             exec('from %s import antpos'% opts.cal)
             gains = capo.wyl.mwa_bandpass_fit(gains,antpos)
+        if opts.polyfit:
+            print '   polyfitting'
+            gains = capo.wyl.poly_bandpass_fit(gains,instru=opts.instru)
 #*********************************************************************************************
         fqs = np.ones((freqs.size))
         fuse = np.arange(freqs.size)
