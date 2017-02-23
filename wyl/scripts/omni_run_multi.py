@@ -42,6 +42,8 @@ o.add_option('--projdegen', dest='projdegen', default='/users/wl42/data/wl42/FHD
              help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
 o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to fitted fhd solutions')
+o.add_option('--divauto', dest='divauto', default=False, action='store_true',
+             help='Toggle: use auto corr to weight visibilities before cal')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -173,6 +175,10 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     timeinfo = infodict['timeinfo']
     ex_ants = infodict['ex_ants']
     auto = infodict['auto_corr']
+    if opts.divauto:
+        for bl in d.keys():
+            i,j = bl
+            d[bl][p] /= (auto[i]*auto[j])
     print 'Getting reds from calfile'
     print 'generating info:'
     filter_length = None
@@ -224,6 +230,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for a in g2[p[0]].keys():
             gmean = np.mean(g2[p[0]][a],axis=0)
             g2[p[0]][a] = np.resize(gmean,(ginfo[1],ginfo[2]))
+    if opts.divauto:
+        for a in g2[p[0]].keys():
+            g2[p[0]][a] *= auto[a]
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
     ############# correct the center of each coarse band and coarse band edge if instrument is mwa ######################
     if opts.instru == 'mwa':

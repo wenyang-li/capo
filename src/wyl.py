@@ -1,4 +1,4 @@
-import numpy as np, omnical, aipy, math
+import numpy as np, omnical, aipy
 import uvdata.uvdata as uvd
 import subprocess, datetime, os
 from astropy.io import fits
@@ -230,7 +230,7 @@ def uv_read_fc(filenames, filetype=None, bl_str=None,antstr='cross',p_list = ['x
 
         nbl -= (auto + exconj)
         
-        nant = int((1+math.sqrt(1+8*nbl))/2)
+        nant = int((1+np.sqrt(1+8*nbl))/2)
         bl_list = bl_str.split(',')
         for ii in range(0,uvdata.Nbls):
             if ant1[ii] < 0: continue
@@ -308,7 +308,7 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
                     ant2[ii]=-1
                     exconj += 1
         nbl -= (auto + exconj)
-        nant = int((1+math.sqrt(1+8*nbl))/2)
+        nant = int((1+np.sqrt(1+8*nbl))/2)
         ex_ant = find_ex_ant(uvdata)
         for jj in range(0,npol):
             auto_corr = {}
@@ -332,6 +332,12 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
                     m = np.mean(m,axis=0)
                     dat[bl][pp] = np.complex64(m.data.reshape(1,-1))
                     flg[bl][pp] = m.mask.reshape(1,-1)
+            scale = 0
+            for a in auto_corr.keys():
+                scale += np.mean(auto_corr[a])
+            scale /= len(auto_corr.keys())
+            for a in auto_corr.keys():
+                auto_corr[a] /= scale
             ginfo[0] = nant
             ginfo[1] = Nt
             ginfo[2] = nfreq
