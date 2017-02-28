@@ -4,7 +4,7 @@
 import numpy as np
 import omnical, aipy, capo
 import pickle, optparse, os, sys, glob
-import uvdata.uvdata as uvd
+import pyuvdata.uvdata as uvd
 
 ### Options ###
 o = optparse.OptionParser()

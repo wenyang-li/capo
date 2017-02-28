@@ -9,7 +9,7 @@ from scipy.io.idl import readsav
 #from IPython import embed
 
 o = optparse.OptionParser()
-o.set_usage('omni_run_multi.py [options] *uvcRRE/obsid')
+o.set_usage('omni_run_multi.py [options] *uvcRRE/obsid') #only takes 1 obsid
 o.set_description(__doc__)
 aipy.scripting.add_standard_options(o,cal=True,pol=True)
 o.add_option('--calpar',dest='calpar',type='string',default=None,
@@ -38,12 +38,14 @@ o.add_option('--initauto',dest='initauto',default=False,action='store_true',
              help='Toggle: use auto_corr as initial guess for gains')
 o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
-o.add_option('--projdegen', dest='projdegen', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0_2/calibration/', type='string',
-             help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
+o.add_option('--projdegen', dest='projdegen', default=False, action='store_true',
+             help='Toggle: project degeneracy to raw fhd solutions')
 o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to fitted fhd solutions')
 o.add_option('--divauto', dest='divauto', default=False, action='store_true',
              help='Toggle: use auto corr to weight visibilities before cal')
+o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0/calibration/', type='string',
+             help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -121,8 +123,8 @@ if opts.calpar != None: #create g0 if txt file is provided
     else:
         raise IOError('invalid calpar file')
 
-if opts.instru == 'mwa' and not opts.projdegen is None:
-    fhd_cal = readsav(opts.projdegen+args[0]+'_cal.sav',python_dict=True)
+if opts.projdegen or opts.fitdegen:
+    fhd_cal = readsav(opts.fhdpath+args[0]+'_cal.sav',python_dict=True)
     gfhd = {'x':{},'y':{}}
     if opts.fitdegen:
         for a in range(fhd_cal['cal']['N_TILE'][0]):
@@ -243,7 +245,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
                 if ff%16 in [0,15]:
                     g2[p[0]][a][:,ff] = 0
     ############# To project out degeneracy parameters ####################
-    if opts.instru == 'mwa' and not opts.projdegen is None:
+    if opts.projdegen or opts.fitdegen:
         print '   Projecting degeneracy'
         for a in g2[p[0]].keys():
             if g2[p[0]][a].ndim == 2 : g2[p[0]][a] = np.mean(g2[p[0]][a][1:53],axis=0)

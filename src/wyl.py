@@ -1,5 +1,5 @@
 import numpy as np, omnical, aipy
-import uvdata.uvdata as uvd
+import pyuvdata.uvdata as uvd
 import subprocess, datetime, os
 from astropy.io import fits
 from uv_data_only import *

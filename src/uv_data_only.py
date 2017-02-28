@@ -1,6 +1,6 @@
 ### pulled some code from https://github.com/HERA-Team/pyuvdata.git to read in data only ###
 
-import uvdata
+import pyuvdata
 import numpy as np
 from astropy.io import fits
 import aipy as a
@@ -14,7 +14,7 @@ def find_ex_ant(uvdata):
             ex_ant.append(ii)
     return ex_ant
     
-class data_uvfits(uvdata.uvfits.UVFITS):
+class data_uvfits(pyuvdata.uvfits.UVFITS):
     def read_data_only(self, filename):
         F = fits.open(filename)
         D = F[0]
@@ -56,7 +56,7 @@ class data_uvfits(uvdata.uvfits.UVFITS):
         self.antenna_numbers = ant_hdu.data.field('NOSTA') - 1
         self.Nants_telescope = len(self.antenna_numbers)
         
-class data_miriad(uvdata.miriad.Miriad):
+class data_miriad(pyuvdata.miriad.Miriad):
     def read_data_only(self, filename):
         uv = a.miriad.UV(filename)
         miriad_header_data = {'Nfreqs': 'nchan', 'Npols': 'npol', 'Nants_telescope':'nants', 'channel_width': 'sdf',}
@@ -111,7 +111,7 @@ class data_miriad(uvdata.miriad.Miriad):
                 self.data_array[blt_index, :, :, pol_ind] = d[3]
                 self.flag_array[blt_index, :, :, pol_ind] = d[4]
                 
-class data_fhd(uvdata.fhd.FHD):
+class data_fhd(pyuvdata.fhd.FHD):
     def read_data_only(self,filelist,use_model=False):
         datafiles = {}
         params_file = None
