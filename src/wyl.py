@@ -334,7 +334,7 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
                     flg[bl][pp] = m.mask.reshape(1,-1)
             scale = 0
             for a in auto_corr.keys():
-                scale += np.mean(auto_corr[a])
+                scale += np.nanmean(auto_corr[a])
             scale /= len(auto_corr.keys())
             for a in auto_corr.keys():
                 auto_corr[a] /= scale
