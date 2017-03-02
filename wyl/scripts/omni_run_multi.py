@@ -46,6 +46,8 @@ o.add_option('--divauto', dest='divauto', default=False, action='store_true',
              help='Toggle: use auto corr to weight visibilities before cal')
 o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0/calibration/', type='string',
              help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
+o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_PhaseII/', type='string',
+             help='path to metafits files')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -318,6 +320,16 @@ for f,filename in enumerate(args):
             for a in opts.ba.split(','):
                 if not int(a) in infodict[p]['ex_ants']:
                     infodict[p]['ex_ants'].append(int(a))
+        metafits_path = opts.metafits + args[0] + '.metafits'
+        if os.path.exists(metafits_path):
+            print '    Finding dead dipoles in metafits'
+            hdu = fits.open(metafits_path)
+            inds = np.where(hdu[1].data['Delays']==32)[0]
+            dead_dipole = np.unique(hdu[1].data['Antenna'][inds])
+            for dip in dead_dipole:
+                if not dip in infodict[p]['ex_ants']:
+                    infodict[p]['ex_ants'].append(dip)
+        else: print '    Warning: Metafits not found. Cannot get the information of dead dipoles'
         ex_ants = sorted(infodict[p]['ex_ants'])
         print '   Excluding antennas:', ex_ants
 
