@@ -187,7 +187,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     print 'generating info:'
     filter_length = None
     if not opts.flength == None: filter_length = float(opts.flength)
-    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[p])
+    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[p], tave = opts.tave)
 
     ### Omnical-ing! Loop Through Compressed Files ###
 
@@ -203,11 +203,13 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     elif opts.calpar.endswith('.sav'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
-            g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
+            if opts.tave: g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
+            else: g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
     elif opts.calpar.endswith('.npz'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
-            g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
+            if opts.tave: g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
+            else: g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
             if opts.initauto: g0[p[0]][key] *= auto[key]
 
     t_jd = timeinfo['times']
@@ -225,6 +227,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen) #SAK CHANGE REMOVEDEGEN
     print '   Lincal-ing'
     m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
+    if opts.divauto:
+        for a in g2[p[0]].keys():
+            g2[p[0]][a] *= auto[a]
     if opts.tave:
         for a in g2[p[0]].keys():
             g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
@@ -234,9 +239,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for a in g2[p[0]].keys():
             gmean = np.mean(g2[p[0]][a],axis=0)
             g2[p[0]][a] = np.resize(gmean,(ginfo[1],ginfo[2]))
-    if opts.divauto:
-        for a in g2[p[0]].keys():
-            g2[p[0]][a] *= auto[a]
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
     ############# correct the center of each coarse band and coarse band edge if instrument is mwa ######################
 #    if opts.instru == 'mwa':

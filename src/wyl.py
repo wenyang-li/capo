@@ -320,6 +320,9 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
                 if ant1[ii] < 0: continue
                 if ant1[ii] == ant2[ii]:
                     auto_corr[ant1[ii]] = np.sqrt(data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii].real)
+                    if tave:
+                        auto_corr[ant1[ii]] = np.mean(auto_corr[ant1[ii]],axis=0)
+                        auto_corr[ant1[ii]] = auto_corr[ant1[ii]].reshape(1,-1)
                     continue
                 bl = (ant1[ii],ant2[ii])
                 if not dat.has_key(bl): dat[bl],flg[bl] = {},{}
