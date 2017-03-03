@@ -187,7 +187,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     print 'generating info:'
     filter_length = None
     if not opts.flength == None: filter_length = float(opts.flength)
-    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[p], tave = opts.tave)
+    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[p])
 
     ### Omnical-ing! Loop Through Compressed Files ###
 
