@@ -290,7 +290,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     m2['jds'] = t_jd
     m2['lsts'] = t_lst
     m2['freqs'] = freqs
-    if instru == 'mwa':
+    if opts.instru == 'mwa':
         print '   start non-hex tiles calibration using fhd model'
         g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
         for a in g3[p].keys():
