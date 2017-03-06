@@ -185,10 +185,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     timeinfo = infodict['timeinfo']
     ex_ants = infodict['ex_ants']
     auto = infodict['auto_corr']
-    if opts.divauto:
-        for bl in d.keys():
-            i,j = bl
-            d[bl][p] /= (auto[i]*auto[j])
     print 'Getting reds from calfile'
     print 'generating info:'
     filter_length = None
@@ -223,7 +219,12 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
 
     data,wgts,xtalk = {}, {}, {}
     m2,g2,v2 = {}, {}, {}
-    data = d #indexed by bl and then pol (backwards from everything else)
+    if opts.divauto:
+        for bl in d.keys():
+            i,j = bl
+            data[bl] = {}
+            data[bl][p] = d[bl][p]/(auto[i]*auto[j])
+    else: data = d #indexed by bl and then pol (backwards from everything else)
 
     wgts[p] = {} #weights dictionary by pol
     for bl in f:
@@ -291,7 +292,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     m2['freqs'] = freqs
     if instru == 'mwa':
         print '   start non-hex tiles calibration using fhd model'
-        g3 = capo.wyl.non_hex_cal(data,g2,model_dict[p],realpos,ex_ants=ex_ants)
+        g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
         for a in g3[p].keys():
             if not g2[p].has_key(a): g2[p][a] = g3[p][a]
     if opts.ftype == 'miriad':
