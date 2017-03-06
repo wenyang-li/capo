@@ -44,10 +44,12 @@ o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to fitted fhd solutions')
 o.add_option('--divauto', dest='divauto', default=False, action='store_true',
              help='Toggle: use auto corr to weight visibilities before cal')
-o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0/calibration/', type='string',
+o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0/', type='string',
              help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
 o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_PhaseII/', type='string',
              help='path to metafits files')
+o.add_option('--ex_dipole', dest='ex_dipole', default=False, action='store_true',
+             help='Toggle: exclude tiles which have dead dipoles')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -126,7 +128,7 @@ if opts.calpar != None: #create g0 if txt file is provided
         raise IOError('invalid calpar file')
 
 if opts.projdegen or opts.fitdegen:
-    fhd_cal = readsav(opts.fhdpath+args[0]+'_cal.sav',python_dict=True)
+    fhd_cal = readsav(opts.fhdpath+'calibration/'+args[0]+'_cal.sav',python_dict=True)
     gfhd = {'x':{},'y':{}}
     if opts.fitdegen:
         for a in range(fhd_cal['cal']['N_TILE'][0]):
@@ -167,6 +169,10 @@ for filename in args:
 
 exec('from %s import *'% opts.cal) # Including antpos, realpos, EastHex, SouthHex
 
+if opts.instru == 'mwa':
+    print "   Loading model"
+    model_files = glob.glob(opts.fhdpath+'vis_data/'+args[0]+'*') + glob.glob(opts.fhdpath+'metadata/'+args[0]+'*')
+    model_dict = capo.wyl.uv_read_omni([model_files],filetype='fhd', antstr='cross', p_list=pols, use_model=True)
 #################################################################################################
 def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol, auto_corr]
     filename = infodict['filename']
@@ -283,7 +289,11 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     m2['jds'] = t_jd
     m2['lsts'] = t_lst
     m2['freqs'] = freqs
-
+    if instru == 'mwa':
+        print '   start non-hex tiles calibration using fhd model'
+        g3 = capo.wyl.non_hex_cal(data,g2,model_dict[p],realpos,ex_ants=ex_ants)
+        for a in g3[p].keys():
+            if not g2[p].has_key(a): g2[p][a] = g3[p][a]
     if opts.ftype == 'miriad':
         npzname = opts.omnipath+'.'.join(filename.split('/')[-1].split('.')[0:4])+'.npz'
     else:
@@ -322,16 +332,17 @@ for f,filename in enumerate(args):
             for a in opts.ba.split(','):
                 if not int(a) in infodict[p]['ex_ants']:
                     infodict[p]['ex_ants'].append(int(a))
-        metafits_path = opts.metafits + args[0] + '.metafits'
-        if os.path.exists(metafits_path):
-            print '    Finding dead dipoles in metafits'
-            hdu = fits.open(metafits_path)
-            inds = np.where(hdu[1].data['Delays']==32)[0]
-            dead_dipole = np.unique(hdu[1].data['Antenna'][inds])
-            for dip in dead_dipole:
-                if not dip in infodict[p]['ex_ants']:
-                    infodict[p]['ex_ants'].append(dip)
-        else: print '    Warning: Metafits not found. Cannot get the information of dead dipoles'
+        if opts.ex_dipole:
+            metafits_path = opts.metafits + args[0] + '.metafits'
+            if os.path.exists(metafits_path):
+                print '    Finding dead dipoles in metafits'
+                hdu = fits.open(metafits_path)
+                inds = np.where(hdu[1].data['Delays']==32)[0]
+                dead_dipole = np.unique(hdu[1].data['Antenna'][inds])
+                for dip in dead_dipole:
+                    if not dip in infodict[p]['ex_ants']:
+                        infodict[p]['ex_ants'].append(dip)
+            else: print '    Warning: Metafits not found. Cannot get the information of dead dipoles'
         ex_ants = sorted(infodict[p]['ex_ants'])
         print '   Excluding antennas:', ex_ants
 

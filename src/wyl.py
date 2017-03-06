@@ -255,7 +255,7 @@ def uv_read_fc(filenames, filetype=None, bl_str=None,antstr='cross',p_list = ['x
         ginfo[2] = nfreq
     return info, dat, flg, ginfo, freqarr, ex_ant
 
-def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], tave=False, output_mask = False):
+def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], tave=False, output_mask = False, use_model=False):
     ### Now only support reading in one data file once, don't load in multiple obs ids ###
     info = {'lsts':[], 'times':[]}
     ginfo = [0,0,0]
@@ -272,7 +272,7 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
             uvdata.read_data_only(filename)
         elif filetype == 'fhd':
             uvdata = data_fhd()  #in this case filename should be a list of files
-            uvdata.read_data_only(filename)
+            uvdata.read_data_only(filename,use_model=use_model)
         else:
             raise IOError('invalid filetype, it should be miriad, uvfits, or fhd')
         Nt = uvdata.Ntimes
@@ -574,3 +574,45 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
                 factor = np.exp(eta+1j*(x*phs[0]+y*phs[1]+phs[2]))
                 r[a] /= factor
     return proj
+
+def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[]):
+    fqflag = []
+    for ii in range(384):
+        if ii%16 in [0,15]: fqflag.append(ii)
+    g3 = {}
+    for p in g2.keys():
+        g3[p] = {}
+        a = g2[p].keys()[0]
+        SH = g2[p][a].shape
+        pp = p+p
+        mvis = model_dict['data']
+        mwgt = model_dict['flag']
+        for a1 in range(0,56):
+            nur,nui,den = 0,0,0
+            if a1 in ex_ants: continue
+            for a2 in g2[p].keys():
+                sep = np.array([realpos[a2]['top_x']-realpos[a1]['top_x'],
+                                realpos[a2]['top_y']-realpos[a1]['top_y'],
+                                realpos[a2]['top_z']-realpos[a1]['top_z']])
+                if np.linalg.norm(sep) < 50*3e8/np.max(model_dict['freqs']): continue
+                bl = (a1,a2)
+                try: dv = data[bl][pp]
+                except(KeyError): dv = data[bl[::-1]][pp].conj()
+                try:
+                    dm = mvis[bl][pp]*(g2[p][a2].conj())
+                    dw = np.logical_not(mwgt[bl][pp])
+                except(KeyError):
+                    dm = mvis[bl[::-1]][pp].conj()*g2[p][a2]
+                    dw = np.logical_not(mwgt[bl[::-1]][pp])
+                nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)*dw,axis=0)
+                nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)*dw,axis=0)
+                den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dw,axis=0)
+            if np.nansum(den) == 0: continue
+            den[fqflag] = 1
+            g = nur/den + 1.j*nui/den
+            g3[p][a] = np.resize(g,SH)
+    return g3
+
+
+
+
