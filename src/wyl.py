@@ -610,7 +610,7 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[]):
             if np.nansum(den) == 0: continue
             den[fqflag] = 1
             g = nur/den + 1.j*nui/den
-            g3[p][a] = np.resize(g,SH)
+            g3[p][a1] = np.resize(g,SH)
     return g3
 
 
