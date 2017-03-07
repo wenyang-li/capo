@@ -369,7 +369,7 @@ def polyfunc(x,z):
     return sum
 
 
-def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1, band = 'high'):
+def mwa_bandpass_fit(gains, tile_info, amp_order=2, phs_order=1, band = 'high'):
     if band.lower() == 'high':
         fqs = np.linspace(167.075,197.715,384)
     elif band.lower() == 'low':
@@ -377,7 +377,7 @@ def mwa_bandpass_fit(gains, antpos, amp_order=2, phs_order=1, band = 'high'):
     for p in gains.keys():
         bandpass = {}
         for ant in gains[p].keys():
-            cable = antpos[ant]['cable']
+            cable = tile_info[ant]['cable']
             if not bandpass.has_key(cable): bandpass[cable] = {}
             bandpass[cable][ant] = np.mean(gains[p][ant][1:53],axis=0)
             SH = gains[p][ant].shape

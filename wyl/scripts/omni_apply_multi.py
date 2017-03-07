@@ -93,8 +93,8 @@ for f,filename in enumerate(args):
 #********************** if choose to make sols smooth ***************************
         if opts.bpfit and opts.instru == 'mwa':
             print '   bandpass fitting'
-            exec('from %s import antpos'% opts.cal)
-            gains = capo.wyl.mwa_bandpass_fit(gains,antpos)
+            exec('from %s import tile_info'% opts.cal)
+            gains = capo.wyl.mwa_bandpass_fit(gains,tile_info)
         if opts.polyfit:
             print '   polyfitting'
             gains = capo.wyl.poly_bandpass_fit(gains,instru=opts.instru)
