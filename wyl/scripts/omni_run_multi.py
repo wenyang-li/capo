@@ -293,8 +293,8 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if opts.instru == 'mwa':
         print '   start non-hex tiles calibration using fhd model'
         g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
-        for a in g3[p].keys():
-            if not g2[p].has_key(a): g2[p][a] = g3[p][a]
+        for a in g3[p[0]].keys():
+            if not g2[p[0]].has_key(a): g2[p[0]][a] = g3[p[0]][a]
     if opts.ftype == 'miriad':
         npzname = opts.omnipath+'.'.join(filename.split('/')[-1].split('.')[0:4])+'.npz'
     else:
