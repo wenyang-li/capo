@@ -271,7 +271,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             dx = realpos[a]['top_x']-realpos[ref]['top_x']
             dy = realpos[a]['top_y']-realpos[ref]['top_y']
             proj = amppar[p[0]]*np.exp(1j*(dx*phspar[p[0]]['phix']+dy*phspar[p[0]]['phiy']))
-            if a < 92: proj *= phspar[p[0]]['offset_east']
+            if a < 93: proj *= phspar[p[0]]['offset_east']
             else: proj *= phspar[p[0]]['offset_south']
             g2[p[0]][a] *= proj
         print '   linear projecting'

@@ -587,7 +587,7 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[]):
         pp = p+p
         mvis = model_dict['data']
         mwgt = model_dict['flag']
-        for a1 in range(0,56):
+        for a1 in range(0,57):
             nur,nui,den = 0,0,0
             if a1 in ex_ants: continue
             for a2 in g2[p].keys():
