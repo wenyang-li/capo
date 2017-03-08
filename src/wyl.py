@@ -519,7 +519,7 @@ def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
             dy = realpos[a]['top_y'] - realpos[ref_antenna]['top_y']
             proj = np.exp(1j*(dx*phix+dy*phiy))
             offset = np.exp(1j*np.angle(fhd[p][a]/omni[p][a]/proj))
-            if a < 92: offset1.append(offset)
+            if a < 93: offset1.append(offset)
             else: offset2.append(offset)
         offset1 = np.array(offset1)
         offset2 = np.array(offset2)
