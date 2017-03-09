@@ -267,24 +267,31 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         amppar = capo.wyl.ampproj(g2,gfhd)
         print '   projecting phase'
         phspar = capo.wyl.phsproj(g2,gfhd,realpos,EastHex,SouthHex,ref)
+        degen_proj = {}
         for a in g2[p[0]].keys():
             dx = realpos[a]['top_x']-realpos[ref]['top_x']
             dy = realpos[a]['top_y']-realpos[ref]['top_y']
             proj = amppar[p[0]]*np.exp(1j*(dx*phspar[p[0]]['phix']+dy*phspar[p[0]]['phiy']))
             if a < 93: proj *= phspar[p[0]]['offset_east']
             else: proj *= phspar[p[0]]['offset_south']
-            g2[p[0]][a] *= proj
+            degen_proj[a] = proj
+#            g2[p[0]][a] *= proj
         print '   linear projecting'
         lp = capo.wyl.linproj(g2,gfhd,realpos)
         for a in g2[p[0]].keys():
-            dx = realpos[a]['top_x']/100
-            dy = realpos[a]['top_y']/100
+            dx = realpos[a]['top_x']
+            dy = realpos[a]['top_y']
             proj = np.exp(lp[p[0]]['eta']+1j*(dx*lp[p[0]]['phix']+dy*lp[p[0]]['phiy']+lp[p[0]]['offset']))
-            g2[p[0]][a] *= proj
-            g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
+            degen_proj[a] *= proj
+#            g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
             for ff in range(384):
                 if ff%16 in [0,15]:
-                    g2[p[0]][a][:,ff] = 0    #clean nans
+                    degen_proj[a][ff] = 0    #clean nans
+        for a in g2[p[0]].keys():
+            g2[p[0]][a] *= degen_proj[a]
+        for bl in v2[p].keys():
+            i1,i2 = bl
+            v2[p][bl] /= (degen_proj[i2].conj()*degen_proj[i1])
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
