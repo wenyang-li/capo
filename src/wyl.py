@@ -547,8 +547,8 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
         proj[p]['offset'] = 0
         for a in omni[p].keys():
             r[a] = fhd[p][a]/omni[p][a]
-            x = realpos[a]['top_x']
-            y = realpos[a]['top_y']
+            x = realpos[a]['top_x']/100
+            y = realpos[a]['top_y']/100
             M += np.array([[x*x,x*y,x],
                            [x*y,y*y,y],
                            [x,  y,  1]])
@@ -569,8 +569,8 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
             proj[p]['phiy'] += phs[1]
             proj[p]['offset'] += phs[2]
             for a in omni[p].keys():
-                x = realpos[a]['top_x']
-                y = realpos[a]['top_y']
+                x = realpos[a]['top_x']/100
+                y = realpos[a]['top_y']/100
                 factor = np.exp(eta+1j*(x*phs[0]+y*phs[1]+phs[2]))
                 r[a] /= factor
     return proj
