@@ -275,7 +275,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             if a < 93: proj *= phspar[p[0]]['offset_east']
             else: proj *= phspar[p[0]]['offset_south']
             degen_proj[a] = proj
-#            g2[p[0]][a] *= proj
         print '   linear projecting'
         lp = capo.wyl.linproj(g2,gfhd,realpos)
         for a in g2[p[0]].keys():
@@ -283,12 +282,12 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             dy = realpos[a]['top_y']
             proj = np.exp(lp[p[0]]['eta']+1j*(dx*lp[p[0]]['phix']+dy*lp[p[0]]['phiy']+lp[p[0]]['offset']))
             degen_proj[a] *= proj
-#            g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
             for ff in range(384):
                 if ff%16 in [0,15]:
                     degen_proj[a][ff] = 0    #clean nans
         for a in g2[p[0]].keys():
             g2[p[0]][a] *= degen_proj[a]
+            g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
         for bl in v2[p].keys():
             i1,i2 = bl
             v2[p][bl] /= (degen_proj[i2].conj()*degen_proj[i1])
