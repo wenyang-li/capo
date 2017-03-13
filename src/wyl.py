@@ -320,7 +320,7 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
                 if ant1[ii] < 0: continue
                 if ant1[ii] == ant2[ii]:
                     auto_temp = np.sqrt(np.mean((data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii].real)[1:-2],axis=0))
-                    if tave: auto_corr[ant1[ii]] = auto_corr[ant1[ii]].reshape(1,-1)
+                    if tave: auto_corr[ant1[ii]] = auto_temp.reshape(1,-1)
                     else: auto_corr[ant1[ii]] = np.resize(auto_temp,(uvdata.Ntimes,uvdata.Nfreqs))
                     continue
                 bl = (ant1[ii],ant2[ii])
