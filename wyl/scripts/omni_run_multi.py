@@ -257,12 +257,15 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
 #                    g2[p[0]][a][:,ff] = 0
     ############# To project out degeneracy parameters ####################
     if opts.projdegen or opts.fitdegen:
+        fuse = []
+        for ff in range(384):
+            if not ff%16 in [0,15]: fuse.append(ff)
         print '   Projecting degeneracy'
-        for a in g2[p[0]].keys():
-            if g2[p[0]][a].ndim == 2 : g2[p[0]][a] = np.mean(g2[p[0]][a][1:53],axis=0)
+#        for a in g2[p[0]].keys():
+#            if g2[p[0]][a].ndim == 2 : g2[p[0]][a] = np.mean(g2[p[0]][a][1:53],axis=0)
         ref = g2[p[0]].keys()[0] # pick a reference tile to reduce the effect of phase wrapping
-        ref_exp = np.exp(1j*np.angle(g2[p[0]][ref]/gfhd[p[0]][ref]))
-        for a in g2[p[0]].keys(): g2[p[0]][a] /= ref_exp
+        ref_exp = np.exp(1j*np.angle(g2[p[0]][ref][:,fuse]/gfhd[p[0]][ref][fuse]))
+        for a in g2[p[0]].keys(): g2[p[0]][a][:,fuse] /= ref_exp
         print '   projecting amplitude'
         amppar = capo.wyl.ampproj(g2,gfhd)
         print '   projecting phase'
@@ -276,19 +279,20 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             else: proj *= phspar[p[0]]['offset_south']
             degen_proj[a] = proj
             g2[p[0]][a] *= proj
-        print '   linear projecting'
-        lp = capo.wyl.linproj(g2,gfhd,realpos)
+#        print '   linear projecting'
+#        lp = capo.wyl.linproj(g2,gfhd,realpos)
         for a in g2[p[0]].keys():
-            dx = realpos[a]['top_x']/100
-            dy = realpos[a]['top_y']/100
-            proj = np.exp(lp[p[0]]['eta']+1j*(dx*lp[p[0]]['phix']+dy*lp[p[0]]['phiy']+lp[p[0]]['offset']))
-            degen_proj[a] *= proj
-            g2[p[0]][a] *= proj
+#            dx = realpos[a]['top_x']/100
+#            dy = realpos[a]['top_y']/100
+#            proj = np.exp(lp[p[0]]['eta']+1j*(dx*lp[p[0]]['phix']+dy*lp[p[0]]['phiy']+lp[p[0]]['offset']))
+#            degen_proj[a] *= proj
+#            g2[p[0]][a] *= proj
             for ff in range(384):
                 if ff%16 in [0,15]:
-                    g2[p[0]][a][ff] = 0
-                    degen_proj[a][ff] = 0    #clean nans
-            g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
+                    g2[p[0]][a][:,ff] = 1
+                    degen_proj[a][:,ff] = 1    #clean nans
+            g_temp = np.mean(g2[p[0]][a][1:54],axis=0)
+            g2[p[0]][a] = np.resize(g_temp,(ginfo[1],ginfo[2]))
         for bl in v2[p].keys():
             i1,i2 = bl
             v2[p][bl] /= (degen_proj[i2].conj()*degen_proj[i1])
