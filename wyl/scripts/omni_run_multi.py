@@ -50,6 +50,8 @@ o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_
              help='path to metafits files')
 o.add_option('--ex_dipole', dest='ex_dipole', default=False, action='store_true',
              help='Toggle: exclude tiles which have dead dipoles')
+o.add_option('--use_derivative', dest='use_derivative', default='', type='string',
+             help='do redundant cal on fourier couple of derivatives of image space, eg: xy, default is 0th derivative, dependence: divauto should be off')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -224,6 +226,18 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             i,j = bl
             data[bl] = {}
             data[bl][p] = d[bl][p]/(auto[i]*auto[j])
+    elif len(opts.use_derivative) > 0:
+        for dev in opts.use_derivative:
+            for bl in d.keys():
+                i,j = bl
+                if not data.has_key(bl):
+                    data[bl] = {}
+                    data[bl][p] = np.ones((ginfo[1],ginfo[2]),dtype=np.complex64)
+                    data[bl][p] *= d[bl][p]
+                if dev == 'x': dp = realpos[j]['top_x'] - realpos[i]['top_x']
+                elif dev == 'y': dp = realpos[j]['top_y'] - realpos[i]['top_y']
+                else: raise IOError('invalid derivative parameter. should only be combinations of x and y')
+                data[bl][p] *= dp
     else: data = d #indexed by bl and then pol (backwards from everything else)
 
     wgts[p] = {} #weights dictionary by pol
