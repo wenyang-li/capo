@@ -50,7 +50,7 @@ o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_
              help='path to metafits files')
 o.add_option('--ex_dipole', dest='ex_dipole', default=False, action='store_true',
              help='Toggle: exclude tiles which have dead dipoles')
-o.add_option('--len_wgt', dest='len_wgt', default=0, type='float',
+o.add_option('--len_wgt', dest='len_wgt', default=0, type='string',
              help='weight visbilities by len_wgt order of baseline length ')
 opts,args = o.parse_args(sys.argv[1:])
 
@@ -221,6 +221,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
 
     data,wgts,xtalk = {}, {}, {}
     m2,g2,v2 = {}, {}, {}
+    len_wgt = float(opts.len_wgt)
     if opts.divauto:
         for bl in d.keys():
             i,j = bl
