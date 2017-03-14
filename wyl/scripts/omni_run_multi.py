@@ -43,7 +43,7 @@ o.add_option('--projdegen', dest='projdegen', default=False, action='store_true'
 o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to fitted fhd solutions')
 o.add_option('--divauto', dest='divauto', default=False, action='store_true',
-             help='Toggle: use auto corr to weight visibilities before cal')
+             help='Toggle: use auto corr to weight visibilities before cal, need len_wgt to be non-zero')
 o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0/', type='string',
              help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
 o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_PhaseII/', type='string',
@@ -51,7 +51,7 @@ o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_
 o.add_option('--ex_dipole', dest='ex_dipole', default=False, action='store_true',
              help='Toggle: exclude tiles which have dead dipoles')
 o.add_option('--len_wgt', dest='len_wgt', default=0, type='string',
-             help='weight visbilities by len_wgt order of baseline length ')
+             help='weight visbilities by len_wgt order of baseline length.')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -222,18 +222,14 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     data,wgts,xtalk = {}, {}, {}
     m2,g2,v2 = {}, {}, {}
     len_wgt = float(opts.len_wgt)
-    if opts.divauto:
-        for bl in d.keys():
-            i,j = bl
-            data[bl] = {}
-            data[bl][p] = d[bl][p]/(auto[i]*auto[j])
-    elif not len_wgt == 0:
+    if not len_wgt == 0:
         for bl in d.keys():
             i,j = bl
             data[bl] = {}
             dp = np.array([antpos[j]['top_x']-antpos[i]['top_x'],antpos[j]['top_y']-antpos[i]['top_y']])
             bl_len = np.linalg.norm(dp)
             data[bl][p] = d[bl][p]*np.power(bl_len,len_wgt)
+            if opts.divauto: data[bl][p] /= (auto[i]*auto[j])
     else: data = d #indexed by bl and then pol (backwards from everything else)
 
     wgts[p] = {} #weights dictionary by pol
@@ -304,8 +300,12 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             g_temp = np.mean(g2[p[0]][a][1:54],axis=0)
             g2[p[0]][a] = np.resize(g_temp,(ginfo[1],ginfo[2]))
         for bl in v2[p].keys():
-            i1,i2 = bl
-            v2[p][bl] /= (degen_proj[i2].conj()*degen_proj[i1])
+            i,j = bl
+            v2[p][bl] /= (degen_proj[j].conj()*degen_proj[i])
+            if not len_wgt == 0:
+                dp = np.array([antpos[j]['top_x']-antpos[i]['top_x'],antpos[j]['top_y']-antpos[i]['top_y']])
+                bl_len = np.linalg.norm(dp)
+                v2[p][bl] /= np.power(bl_len,len_wgt)
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
