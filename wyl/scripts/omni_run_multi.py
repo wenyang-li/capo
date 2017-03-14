@@ -225,6 +225,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if not len_wgt == 0:
         for bl in d.keys():
             i,j = bl
+            if not (i in antpos.keys() and j in antpos.keys()): continue
             data[bl] = {}
             dp = np.array([antpos[j]['top_x']-antpos[i]['top_x'],antpos[j]['top_y']-antpos[i]['top_y']])
             bl_len = np.linalg.norm(dp)
