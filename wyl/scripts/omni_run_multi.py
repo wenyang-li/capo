@@ -226,7 +226,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         i,j = bl
         if not (i in antpos.keys() and j in antpos.keys()): continue
         if opts.tave:
-            m = np.ma.masked_array(d[bl][pp],mask=f[bl][pp])
+            m = np.ma.masked_array(d[bl][p],mask=f[bl][p])
             m = np.mean(m,axis=0)
             data[bl] = {p: np.complex64(m.data.reshape(1,-1))}
         else: data[bl] = {p: copy.copy(d[bl][p])}
@@ -283,8 +283,8 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for a in g2[p[0]].keys():
             for ff in range(384):
                 if ff%16 in [0,15]:
-                    g2[p[0]][a][:,ff] = 1
-                    degen_proj[a][:,ff] = 1    #clean nans
+                    g2[p[0]][a][:,ff] = 0
+                    degen_proj[a][:,ff] = np.inf    #clean nans
             if opts.tave:
                 g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
             else:
