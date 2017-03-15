@@ -257,7 +257,7 @@ def uv_read_fc(filenames, filetype=None, bl_str=None,antstr='cross',p_list = ['x
         ginfo[2] = nfreq
     return info, dat, flg, ginfo, freqarr, ex_ant
 
-def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], output_mask = False, use_model=False):
+def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], use_model=False):
     ### Now only support reading in one data file once, don't load in multiple obs ids ###
     info = {'lsts':[], 'times':[]}
     ginfo = [0,0,0]
