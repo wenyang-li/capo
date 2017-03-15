@@ -5,22 +5,24 @@ from astropy.io import fits
 from uv_data_only import *
 import copy
 
-def output_mask_array(filename, filetype, flag_array):
-    outfn = ''
-    if filetype == 'fhd':
-        for fn in filename:
-            if fn.endswith('_params.sav'): outfn = ('_').join(fn.split('_')[0:-1]) + '_mask.npy'
-    ### there must be a params file, otherwise an error is already raised earlier ###
-    elif filetype == 'uvfits':
-        outfn = '.'.join(filename.split('.')[0:-1]) + '_mask.npy'
-    elif filetype == 'miriad':
-        outfn = '.'.join(filename.split('.')[0:-2]) + '_mask.npy'
+#def output_mask_array(filename, filetype, flag_array):
+def output_mask_array(flag_array):
+#    outfn = ''
+#    if filetype == 'fhd':
+#        for fn in filename:
+#            if fn.endswith('_params.sav'): outfn = ('_').join(fn.split('_')[0:-1]) + '_mask.npy'
+#    ### there must be a params file, otherwise an error is already raised earlier ###
+#    elif filetype == 'uvfits':
+#        outfn = '.'.join(filename.split('.')[0:-1]) + '_mask.npy'
+#    elif filetype == 'miriad':
+#        outfn = '.'.join(filename.split('.')[0:-2]) + '_mask.npy'
     invf = 1 - flag_array
     sf = np.sum((np.sum(invf,axis=0)),axis=0).astype(bool)
     st = np.sum((np.sum(invf,axis=1)),axis=1).astype(bool)
     mask_array = 1 - np.outer(st,sf)
     mask_array = mask_array.astype(bool)
-    np.save(outfn,mask_array)
+#    np.save(outfn,mask_array)
+    return mask_array
 
 
 def writefits(npzfiles, repopath, ex_ants=[], name_dict={}):
@@ -255,7 +257,7 @@ def uv_read_fc(filenames, filetype=None, bl_str=None,antstr='cross',p_list = ['x
         ginfo[2] = nfreq
     return info, dat, flg, ginfo, freqarr, ex_ant
 
-def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], tave=False, output_mask = False, use_model=False):
+def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'], output_mask = False, use_model=False):
     ### Now only support reading in one data file once, don't load in multiple obs ids ###
     info = {'lsts':[], 'times':[]}
     ginfo = [0,0,0]
@@ -319,9 +321,7 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
             for ii in range(0,uvdata.Nbls):
                 if ant1[ii] < 0: continue
                 if ant1[ii] == ant2[ii]:
-                    auto_temp = np.sqrt(np.mean((data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii].real)[1:-2],axis=0))
-                    if tave: auto_corr[ant1[ii]] = auto_temp.reshape(1,-1)
-                    else: auto_corr[ant1[ii]] = np.resize(auto_temp,(uvdata.Ntimes,uvdata.Nfreqs))
+                    auto_corr[ant1[ii]] = np.sqrt(np.mean((data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii].real)[1:-2],axis=0)) + 1e-10 # +1e-10 to avoid division error
                     continue
                 bl = (ant1[ii],ant2[ii])
                 if not dat.has_key(bl): dat[bl],flg[bl] = {},{}
@@ -329,14 +329,11 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
                     dat[bl][pp],flg[bl][pp] = [],[]
                 dat[bl][pp] = np.complex64(data[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii])
                 flg[bl][pp] = np.array(flag[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs)[:,ii])
-                if tave:
-                    m = np.ma.masked_array(dat[bl][pp],mask=flg[bl][pp])
-                    m = np.mean(m,axis=0)
-                    dat[bl][pp] = np.complex64(m.data.reshape(1,-1))
-                    flg[bl][pp] = m.mask.reshape(1,-1)
-            scale = 0
+            scale = 1e-10
             for a in auto_corr.keys():
-                scale += np.nanmean(auto_corr[a])
+                ave = np.nanmean(auto_corr[a])
+                if np.isnan(ave): continue
+                scale += ave
             scale /= len(auto_corr.keys())
             for a in auto_corr.keys():
                 auto_corr[a] /= scale
@@ -351,12 +348,13 @@ def uv_read_omni(filenames, filetype=None, antstr='cross', p_list = ['xx','yy'],
             infodict[pp]['pol'] = pp
             infodict[pp]['ex_ants'] = ex_ant
             infodict[pp]['auto_corr'] = auto_corr
+            infodict[pp]['mask'] = output_mask_array(flag[:,0][:,:,jj].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs))
         infodict['name_dict'] = {}
         for ii in range(0,uvdata.Nants_telescope):
             if not infodict['name_dict'].has_key(uvdata.antenna_numbers[ii]):
                 infodict['name_dict'][uvdata.antenna_numbers[ii]] = uvdata.antenna_names[ii]
-        if output_mask:
-            output_mask_array(filename, filetype, flag[:,0][:,:,0].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs))
+#        if output_mask:
+#            output_mask_array(filename, filetype, flag[:,0][:,:,0].reshape(uvdata.Ntimes,uvdata.Nbls,uvdata.Nfreqs))
     return infodict
 
 

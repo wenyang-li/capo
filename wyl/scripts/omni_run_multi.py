@@ -3,7 +3,7 @@ import numpy as np
 import omnical, aipy, capo
 import optparse, os, sys, glob
 from astropy.io import fits
-import pickle
+import pickle, copy
 from multiprocessing import Pool
 from scipy.io.idl import readsav
 #from IPython import embed
@@ -26,8 +26,6 @@ o.add_option('--ftype', dest='ftype', default='', type='string',
             help='Type of the input file, .uvfits, or miriad, or fhd, to read fhd, simply type in the path/obsid')
 o.add_option('--tave', dest='tave', default=False, action='store_true',
              help='choose to average data over time before calibration or not')
-o.add_option('--gave', dest='gave', default=False, action='store_true',
-             help='choose to average solution over time after calibration or not')
 o.add_option('--iftxt', dest='iftxt', default=False, action='store_true',
             help='Toggle: write the npz info to a ucla format txt file or not')
 o.add_option('--iffits', dest='iffits', default=False, action='store_true',
@@ -187,6 +185,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     timeinfo = infodict['timeinfo']
     ex_ants = infodict['ex_ants']
     auto = infodict['auto_corr']
+    mask_arr = infodict['mask']
     print 'Getting reds from calfile'
     print 'generating info:'
     filter_length = None
@@ -221,17 +220,30 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
 
     data,wgts,xtalk = {}, {}, {}
     m2,g2,v2 = {}, {}, {}
+
+    # organize data for redundant cal
+    for bl in d.keys():
+        i,j = bl
+        if not (i in antpos.keys() and j in antpos.keys()): continue
+        if opts.tave:
+            m = np.ma.masked_array(d[bl][pp],mask=f[bl][pp])
+            m = np.mean(m,axis=0)
+            data[bl] = {p: np.complex64(m.data.reshape(1,-1))}
+        else: data[bl] = {p: copy.copy(d[bl][p])}
+    # if weight data by baseline length:
     len_wgt = float(opts.len_wgt)
     if not len_wgt == 0:
-        for bl in d.keys():
+        for bl in data.keys():
             i,j = bl
-            if not (i in antpos.keys() and j in antpos.keys()): continue
-            data[bl] = {}
             dp = np.array([antpos[j]['top_x']-antpos[i]['top_x'],antpos[j]['top_y']-antpos[i]['top_y']])
             bl_len = np.linalg.norm(dp)
-            data[bl][p] = d[bl][p]*np.power(bl_len,len_wgt)
-            if opts.divauto: data[bl][p] /= (auto[i]*auto[j])
-    else: data = d #indexed by bl and then pol (backwards from everything else)
+            data[bl][p] *= np.power(bl_len,len_wgt)
+    # if weight antennas by auto corr:
+    if opts.divauto:
+        for bl in data.keys():
+            i,j = bl
+            data[bl][p] /= (auto[i]*auto[j])
+     #indexed by bl and then pol (backwards from everything else)
 
     wgts[p] = {} #weights dictionary by pol
     for bl in f:
@@ -244,32 +256,14 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if opts.divauto:
         for a in g2[p[0]].keys():
             g2[p[0]][a] *= auto[a]
-    if opts.tave:
-        for a in g2[p[0]].keys():
-            g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
-        for bl in v2[p].keys():
-            v2[p][bl] = np.resize(v2[p][bl],(ginfo[1],ginfo[2]))
-    if opts.gave:
-        for a in g2[p[0]].keys():
-            gmean = np.mean(g2[p[0]][a],axis=0)
-            g2[p[0]][a] = np.resize(gmean,(ginfo[1],ginfo[2]))
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
-    ############# correct the center of each coarse band and coarse band edge if instrument is mwa ######################
-#    if opts.instru == 'mwa':
-#        for a in g2[p[0]].keys():
-#            for ff in range(0,384):
-#                if ff%16==8:
-#                    g2[p[0]][a][:,ff] = (g2[p[0]][a][:,ff-1]+g2[p[0]][a][:,ff+1])/2
-#                if ff%16 in [0,15]:
-#                    g2[p[0]][a][:,ff] = 0
+
     ############# To project out degeneracy parameters ####################
     if opts.projdegen or opts.fitdegen:
         fuse = []
         for ff in range(384):
             if not ff%16 in [0,15]: fuse.append(ff)
         print '   Projecting degeneracy'
-#        for a in g2[p[0]].keys():
-#            if g2[p[0]][a].ndim == 2 : g2[p[0]][a] = np.mean(g2[p[0]][a][1:53],axis=0)
         ref = g2[p[0]].keys()[0] # pick a reference tile to reduce the effect of phase wrapping
         ref_exp = np.exp(1j*np.angle(g2[p[0]][ref][:,fuse]/gfhd[p[0]][ref][fuse]))
         for a in g2[p[0]].keys(): g2[p[0]][a][:,fuse] /= ref_exp
@@ -286,20 +280,17 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             else: proj *= phspar[p[0]]['offset_south']
             degen_proj[a] = proj
             g2[p[0]][a] *= proj
-#        print '   linear projecting'
-#        lp = capo.wyl.linproj(g2,gfhd,realpos)
         for a in g2[p[0]].keys():
-#            dx = realpos[a]['top_x']/100
-#            dy = realpos[a]['top_y']/100
-#            proj = np.exp(lp[p[0]]['eta']+1j*(dx*lp[p[0]]['phix']+dy*lp[p[0]]['phiy']+lp[p[0]]['offset']))
-#            degen_proj[a] *= proj
-#            g2[p[0]][a] *= proj
             for ff in range(384):
                 if ff%16 in [0,15]:
                     g2[p[0]][a][:,ff] = 1
                     degen_proj[a][:,ff] = 1    #clean nans
-            g_temp = np.mean(g2[p[0]][a][1:54],axis=0)
-            g2[p[0]][a] = np.resize(g_temp,(ginfo[1],ginfo[2]))
+            if opts.tave:
+                g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
+            else:
+                g_temp = np.ma.masked_array(g2[p[0]][a],mask_arr,fill_value=1.0)
+                g_temp = np.mean(g_temp,axis=0)
+                g2[p[0]][a] = np.resize(g_temp.data,(ginfo[1],ginfo[2]))
         for bl in v2[p].keys():
             i,j = bl
             v2[p][bl] /= (degen_proj[j].conj()*degen_proj[i])
@@ -336,12 +327,12 @@ for f,filename in enumerate(args):
     print "  Reading data: " + filename
     if opts.ftype == 'miriad':
         for p in pols:
-            dict0 = capo.wyl.uv_read_omni([filegroup[p]], filetype = 'miriad', antstr='cross', p_list=[p], tave=opts.tave)
+            dict0 = capo.wyl.uv_read_omni([filegroup[p]], filetype = 'miriad', antstr='cross', p_list=[p])
             infodict[p] = dict0[p]
             infodict[p]['filename'] = filegroup[p]
             infodict['name_dict'] = dict0['name_dict']
     else:
-        infodict = capo.wyl.uv_read_omni([filegroup[key] for key in filegroup.keys()], filetype=opts.ftype, antstr='cross', p_list=pols, tave=opts.tave)
+        infodict = capo.wyl.uv_read_omni([filegroup[key] for key in filegroup.keys()], filetype=opts.ftype, antstr='cross', p_list=pols)
         for p in pols:
             infodict[p]['filename'] = filename
     print "  Finish reading."
