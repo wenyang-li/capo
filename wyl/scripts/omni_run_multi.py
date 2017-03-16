@@ -192,6 +192,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if not opts.flength == None: filter_length = float(opts.flength)
     info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[p])
 
+    reds = info.get_reds()
     ### Omnical-ing! Loop Through Compressed Files ###
 
     print '   Calibrating ' + p + ': ' + filename
@@ -224,7 +225,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     # organize data for redundant cal
     for bl in d.keys():
         i,j = bl
-        if not (i in antpos.keys() and j in antpos.keys()): continue
+        if not (i in info.subsetant and j in info.subsetant): continue
         if opts.tave:
             m = np.ma.masked_array(d[bl][p],mask=f[bl][p])
             m = np.mean(m,axis=0)
@@ -233,11 +234,10 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     # if weight data by baseline length:
     len_wgt = float(opts.len_wgt)
     if not len_wgt == 0:
-        for bl in data.keys():
-            i,j = bl
-            dp = np.array([antpos[j]['top_x']-antpos[i]['top_x'],antpos[j]['top_y']-antpos[i]['top_y']])
-            bl_len = np.linalg.norm(dp)
-            data[bl][p] *= np.power(bl_len,len_wgt)
+        for r in reds:
+            for bl in r:
+                try: data[bl][p] *= np.power(1./float(len(r)),len_wgt)
+                except(KeyError): data[bl[::-1]][p] *= np.power(1./float(len(r)),len_wgt)
     # if weight antennas by auto corr:
     if opts.divauto:
         for bl in data.keys():
@@ -295,9 +295,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             i,j = bl
             v2[p][bl] /= (degen_proj[j].conj()*degen_proj[i])
             if not len_wgt == 0:
-                dp = np.array([antpos[j]['top_x']-antpos[i]['top_x'],antpos[j]['top_y']-antpos[i]['top_y']])
-                bl_len = np.linalg.norm(dp)
-                v2[p][bl] /= np.power(bl_len,len_wgt)
+                for r in reds:
+                    if bl in r or bl[::-1] in r:
+                        v2[p][bl] *= np.power(float(len(r)),len_wgt)
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
