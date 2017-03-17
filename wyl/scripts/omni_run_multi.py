@@ -246,13 +246,14 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             i,j = bl
             data[bl][p] /= (auto[i]*auto[j])
             if opts.smooth:
+                print "   delay filtering"
                 tfq = np.fft.fftfreq(freqs.size,(freqs[1]-freqs[0]))
                 fftdata = np.fft.fft(data[bl][p],axis=1)
                 ri,rj = realpos[i],realpos[j]
                 rij = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
                 inds = np.where(np.abs(tfq)>(np.linalg.norm(rij)/3e8+50e-9))
                 fftdata[:,inds]=0
-                data[bl][p] = np.fft.ifft(fftdata,axis=1)
+                data[bl][p] = np.complex64(np.fft.ifft(fftdata,axis=1))
      #indexed by bl and then pol (backwards from everything else)
 
     wgts[p] = {} #weights dictionary by pol
