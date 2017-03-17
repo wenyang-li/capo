@@ -42,6 +42,8 @@ o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to fitted fhd solutions')
 o.add_option('--divauto', dest='divauto', default=False, action='store_true',
              help='Toggle: use auto corr to weight visibilities before cal, need len_wgt to be non-zero')
+o.add_option('--smooth', dest='smooth', default=False, action='store_true',
+             help='Toggle: smooth data before cal by removing any signal beyond horizon, need divauto on')
 o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0/', type='string',
              help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
 o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_PhaseII/', type='string',
@@ -243,6 +245,14 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for bl in data.keys():
             i,j = bl
             data[bl][p] /= (auto[i]*auto[j])
+            if opts.smooth:
+                tfq = np.fft.fftfreq(freqs.size,(freqs[1]-freqs[0]))
+                fftdata = np.fft.fft(data[bl][p],axis=1)
+                ri,rj = realpos[i],realpos[j]
+                rij = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
+                inds = np.where(np.abs(tfq)>(np.linalg.norm(rij)/3e8+50e-9))
+                fftdata[:,inds]=0
+                data[bl][p] = np.fft.ifft(fftdata,axis=1)
      #indexed by bl and then pol (backwards from everything else)
 
     wgts[p] = {} #weights dictionary by pol
