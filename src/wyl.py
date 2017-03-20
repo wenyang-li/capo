@@ -458,15 +458,14 @@ def ampproj(v2,model_dict,realpos,tave=False):
             dr = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
             if np.linalg.norm(dr) < (50*3e8/180e6): continue
             try:
-                marr = np.ma.masked_array(mdata[bl][p]+1e-20,mflag[bl][p])
+                marr = np.ma.masked_array(mdata[bl][p],mflag[bl][p])
             except(KeyError):
-                marr = np.ma.masked_array(mdata[bl[::-1]][p]+1e-20,mflag[bl[::-1]][p])
+                marr = np.ma.masked_array(mdata[bl[::-1]][p],mflag[bl[::-1]][p])
             if tave:
                 marr = np.mean(marr,axis=0)
                 marr = marr.reshape(1,-1)
-            s1 += (np.abs(v2[p][bl]/np.abs(marr.data))*np.logical_not(marr.mask))
-            s2 += np.logical_not(marr.mask)
-        s2 = np.complex64(s2)
+            s1 += (np.abs(v2[p][bl])*np.abs(marr.data)*np.logical_not(marr.mask))
+            s2 += (np.abs(marr.data)*np.abs(marr.data)*np.logical_not(marr.mask))
         ind = np.where(s2==0)
         s2[ind] = np.inf
         A = s1/s2
