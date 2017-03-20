@@ -284,7 +284,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         ref_exp = np.exp(1j*np.angle(g2[p[0]][ref][:,fuse]/gfhd[p[0]][ref][fuse]))
         for a in g2[p[0]].keys(): g2[p[0]][a][:,fuse] /= ref_exp
         print '   projecting amplitude'
-        amppar = capo.wyl.ampproj(v2,model_dict,realpos,tave=opts.tave)
+        amppar = capo.wyl.ampproj(v2,model_dict,realpos,reds,tave=opts.tave)
         print '   projecting phase'
         phspar = capo.wyl.phsproj(g2,gfhd,realpos,EastHex,SouthHex,ref)
         degen_proj = {}
