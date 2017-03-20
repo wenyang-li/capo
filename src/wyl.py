@@ -446,7 +446,7 @@ def poly_bandpass_fit(gains,amp_order=9, phs_order=1,instru='mwa'):
     return gains
 
 
-def ampproj(v2,model_dict,realpos):
+def ampproj(v2,model_dict,realpos,tave=False):
     amppar = {}
     for p in v2.keys():
         s1,s2 = 0,0
@@ -457,14 +457,26 @@ def ampproj(v2,model_dict,realpos):
             ri,rj = realpos[i],realpos[j]
             dr = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
             if np.linalg.norm(dr) < (50*3e8/180e6): continue
-            try:
-                s1 += (np.abs(mdata[bl][p])/np.abs(v2[p][bl])*np.logical_not(mflag[bl][p]))
-                s2 += (np.logical_not(mflag[bl][p]))
-            except(KeyError):
-                s1 += (np.abs(mdata[bl[::-1]][p])/np.abs(v2[p][bl[::-1]]))*np.logical_not(mflag[bl[::-1]][p])
-                s2 += (np.logical_not(mflag[bl[::-1]][p]))
+            if tave:
+                try:
+                    marr = np.ma.masked_array(mdata[bl][p],mflag[bl][p])
+                    marr = np.mean(marr,axis=0)
+                except(KeyError):
+                    marr = np.ma.masked_array(mdata[bl[::-1]][p],mflag[bl[::-1]][p])
+                    marr = np.mean(marr,axis=0)
+                s1 += (np.abs(marr.data.reshape(1,-1))/np.abs(v2[p][bl])*np.logical_not(marr.mask.reshape(1,-1)))
+                s2 += np.logical_not(marr.mask.reshape(1,-1))
+            else:
+                try:
+                    s1 += (np.abs(mdata[bl][p])/np.abs(v2[p][bl])*np.logical_not(mflag[bl][p]))
+                    s2 += (np.logical_not(mflag[bl][p]))
+                except(KeyError):
+                    s1 += (np.abs(mdata[bl[::-1]][p])/np.abs(v2[p][bl]))*np.logical_not(mflag[bl[::-1]][p])
+                    s2 += (np.logical_not(mflag[bl[::-1]][p]))
         A = s1/s2
-        amppar[p[0]] = np.sqrt(A)
+        zero_inds = np.where(A==0)
+        A[zero_inds] = np.inf
+        amppar[p[0]] = 1/np.sqrt(A)
     return amppar
 
 def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
