@@ -267,6 +267,11 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if opts.divauto:
         for a in g2[p[0]].keys():
             g2[p[0]][a] *= auto[a]
+    if not len_wgt == 0:
+        for bl in v2[p].keys():
+            for r in reds:
+                if bl in r or bl[::-1] in r:
+                    v2[p][bl] *= np.power(float(len(r)),len_wgt)
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
 
     ############# To project out degeneracy parameters ####################
@@ -305,10 +310,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for bl in v2[p].keys():
             i,j = bl
             v2[p][bl] /= (degen_proj[j].conj()*degen_proj[i])
-            if not len_wgt == 0:
-                for r in reds:
-                    if bl in r or bl[::-1] in r:
-                        v2[p][bl] *= np.power(float(len(r)),len_wgt)
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
