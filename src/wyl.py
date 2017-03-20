@@ -459,10 +459,10 @@ def ampproj(v2,model_dict,realpos):
             if np.linalg.norm(dr) < (50*3e8/180e6): continue
             try:
                 s1 += (np.abs(mdata[bl][p])/np.abs(v2[p][bl])*np.logical_not(mflag[bl][p]))
-                s2 += (np.logical_not(mflag[bl][p])
+                s2 += (np.logical_not(mflag[bl][p]))
             except(KeyError):
                 s1 += (np.abs(mdata[bl[::-1]][p])/np.abs(v2[p][bl[::-1]]))*np.logical_not(mflag[bl[::-1]][p])
-                s2 += (np.logical_not(mflag[bl[::-1]][p])
+                s2 += (np.logical_not(mflag[bl[::-1]][p]))
         A = s1/s2
         amppar[p[0]] = np.sqrt(A)
     return amppar
