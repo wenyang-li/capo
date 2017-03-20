@@ -466,8 +466,9 @@ def ampproj(v2,model_dict,realpos,tave=False):
                 marr = marr.reshape(1,-1)
             s1 += (np.abs(v2[p][bl]/np.abs(marr.data))*np.logical_not(marr.mask))
             s2 += np.logical_not(marr.mask)
-        all_flag =  np.where(s2==0)
-        s2[all_flag] = np.inf
+        s2 = np.complex64(s2)
+        ind = np.where(s2==0)
+        s2[ind] = np.inf
         A = s1/s2
         amppar[p[0]] = np.sqrt(A)
     return amppar
