@@ -446,15 +446,25 @@ def poly_bandpass_fit(gains,amp_order=9, phs_order=1,instru='mwa'):
     return gains
 
 
-def ampproj(omni,fhd):
+def ampproj(v2,model_dict,realpos):
     amppar = {}
-    for p in omni.keys():
+    for p in v2.keys():
         s1,s2 = 0,0
-        for a in omni[p].keys():
-            s1 += (np.abs(fhd[p][a])/np.abs(omni[p][a]))
-            s2 += 1
+        mdata = model_dict[p]['data']
+        mflag = model_dict[p]['flag']
+        for bl in v2[p].keys():
+            i,j = bl
+            ri,rj = realpos[i],realpos[j]
+            dr = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
+            if np.linalg.norm(dr) < (50*3e8/180e6): continue
+            try:
+                s1 += (np.abs(mdata[bl][p])/np.abs(v2[p][bl])*np.logical_not(mflag[bl][p]).astype(np.int))
+                s2 += np.logical_not(mflag[bl]).astype(np.int)
+            except(KeyError):
+                s1 += (np.abs(mdata[bl[::-1]][p])/np.abs(v2[p][bl[::-1]]))*np.logical_not(mflag[bl[::-1]][p]).astype(np.int)
+                s2 += np.logical_not(mflag[bl[::-1]]).astype(np.int)
         A = s1/s2
-        amppar[p] = A
+        amppar[p[0]] = np.sqrt(A)
     return amppar
 
 def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
