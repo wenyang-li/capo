@@ -5,6 +5,7 @@ import numpy as np
 import omnical, aipy, capo
 import pickle, optparse, os, sys, glob
 import pyuvdata.uvdata as uvd
+from astropy.io import fits
 
 ### Options ###
 o = optparse.OptionParser()
@@ -29,7 +30,23 @@ o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
 o.add_option('--plot',dest='plot',default=False,action='store_true',
              help='Toggle: Plot fitted bandpass if fit is on. Default=False')
+o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_PhaseII/', type='string',
+             help='path to metafits files')
 opts,args = o.parse_args(sys.argv[1:])
+
+delays = {
+'0,5,10,15,1,6,11,16,2,7,12,17,3,8,13,18':-5,
+'0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15':-4,
+'0,3,6,9,0,3,6,9,0,3,6,9,0,3,6,9':-3,
+'0,2,4,6,0,2,4,6,0,2,4,6,0,2,4,6':-2,
+'0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3':-1,
+'0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0':0,
+'3,2,1,0,3,2,1,0,3,2,1,0,3,2,1,0':1,
+'6,4,2,0,6,4,2,0,6,4,2,0,6,4,2,0':2,
+'9,6,3,0,9,6,3,0,9,6,3,0,9,6,3,0':3,
+'12,8,4,0,13,9,5,1,14,10,6,2,15,11,7,3':4,
+'15,10,5,0,16,11,6,1,17,12,7,2,18,13,8,3':5,
+}
 
 
 #File Dictionary
@@ -85,7 +102,11 @@ for f,filename in enumerate(args):
     #find npz for each pol, then apply
     for ip,p in enumerate(pols):
         if not opts.npz == None:
-            omnifile = opts.npz + '.' + p + '.npz'
+            if opts.instru == 'mwa':
+                hdu = fits.open(opts.metafits+filename+'.metafits')
+                pointing = delays[hdu[0].header['DELAYS']]
+                omnifile = opts.npz + '_' + str(pointing) + '.' + p + '.npz'
+            else: omnifile = opts.npz + '.' + p + '.npz'
         else:
             omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
         print '  Reading and applying:', omnifile

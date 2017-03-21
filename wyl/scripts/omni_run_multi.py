@@ -246,7 +246,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             i,j = bl
             data[bl][p] /= (auto[i]*auto[j])
             if opts.smooth:
-                print "   delay filtering"
                 tfq = np.fft.fftfreq(freqs.size,(freqs[1]-freqs[0]))
                 fftdata = np.fft.fft(data[bl][p],axis=1)
                 ri,rj = realpos[i],realpos[j]
@@ -359,7 +358,7 @@ for f,filename in enumerate(args):
                 if not int(a) in infodict[p]['ex_ants']:
                     infodict[p]['ex_ants'].append(int(a))
         if opts.ex_dipole:
-            metafits_path = opts.metafits + args[0] + '.metafits'
+            metafits_path = opts.metafits + filename + '.metafits'
             if os.path.exists(metafits_path):
                 print '    Finding dead dipoles in metafits'
                 hdu = fits.open(metafits_path)
