@@ -41,7 +41,7 @@ o.add_option('--projdegen', dest='projdegen', default=False, action='store_true'
 o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to fitted fhd solutions')
 o.add_option('--divauto', dest='divauto', default=False, action='store_true',
-             help='Toggle: use auto corr to weight visibilities before cal, need len_wgt to be non-zero')
+             help='Toggle: use auto corr to weight visibilities before cal')
 o.add_option('--smooth', dest='smooth', default=False, action='store_true',
              help='Toggle: smooth data before cal by removing any signal beyond horizon, need divauto on')
 o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0/', type='string',
@@ -50,12 +50,15 @@ o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_
              help='path to metafits files')
 o.add_option('--ex_dipole', dest='ex_dipole', default=False, action='store_true',
              help='Toggle: exclude tiles which have dead dipoles')
-o.add_option('--len_wgt', dest='len_wgt', default=0, type='string',
-             help='weight visbilities by len_wgt order of baseline length.')
+o.add_option('--x_wgt', dest='x_wgt', default=0, type='float',
+             help='weight visbilities for x pol by num of bls in each ubl gp, to the order of x_wgt')
+o.add_option('--y_wgt', dest='y_wgt', default=0, type='float',
+             help='weight visbilities for y pol by num of bls in each ubl gp, by the order of y_wgt')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
 pols = opts.pol.split(',')
+bl_wgt = {'x': float(opts.x_wgt), 'y': float(opts.y_wgt)}
 files = {}
 #files=[]
 g0 = {} #firstcal gains
@@ -233,13 +236,12 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             m = np.mean(m,axis=0)
             data[bl] = {p: np.complex64(m.data.reshape(1,-1))}
         else: data[bl] = {p: copy.copy(d[bl][p])}
-    # if weight data by baseline length:
-    len_wgt = float(opts.len_wgt)
-    if not len_wgt == 0:
+    # if weight data by baseline number in each ubl group:
+    if not bl_wgt[p[0]] == 0:
         for r in reds:
             for bl in r:
-                try: data[bl][p] *= np.power(1./float(len(r)),len_wgt)
-                except(KeyError): data[bl[::-1]][p] *= np.power(1./float(len(r)),len_wgt)
+                try: data[bl][p] *= np.power(1./float(len(r)),bl_wgt[p[0]])
+                except(KeyError): data[bl[::-1]][p] *= np.power(1./float(len(r)),bl_wgt[p[0]])
     # if weight antennas by auto corr:
     if opts.divauto:
         for bl in data.keys():
@@ -266,11 +268,11 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if opts.divauto:
         for a in g2[p[0]].keys():
             g2[p[0]][a] *= auto[a]
-    if not len_wgt == 0:
+    if not bl_wgt[p[0]] == 0:
         for bl in v2[p].keys():
             for r in reds:
                 if bl in r or bl[::-1] in r:
-                    v2[p][bl] *= np.power(float(len(r)),len_wgt)
+                    v2[p][bl] *= np.power(float(len(r)),bl_wgt[p[0]])
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
 
     ############# To project out degeneracy parameters ####################
