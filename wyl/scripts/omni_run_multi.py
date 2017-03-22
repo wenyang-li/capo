@@ -20,6 +20,8 @@ o.add_option('--omnipath',dest='omnipath',default='',type='string',
             help='Path to save .npz files. Include final / in path.')
 o.add_option('--ba',dest='ba',default=None,
             help='Antennas to exclude, separated by commas.')
+o.add_option('--ex_bls',dest='ex_bls',default=None,
+             help='baselines to exclude, separated by commas. eg:0_1,2_3')
 o.add_option('--flength',dest='flength',default=None,
              help='a threshold for baseline lengths to use, in meters')
 o.add_option('--ftype', dest='ftype', default='', type='string',
@@ -61,6 +63,12 @@ pols = opts.pol.split(',')
 bl_wgt = {'x': float(opts.x_wgt), 'y': float(opts.y_wgt)}
 files = {}
 #files=[]
+ex_bls = []
+if opts.ex_bls:
+    ex_bl_list = opts.ex_bls.split(',')
+    for bl in ex_bl_list:
+        _bl = bl.split('_')
+        ex_bls.append((int(_bl[0]),int(_bl[1])))
 g0 = {} #firstcal gains
 g_scale = {'x': 1.0, 'y': 1.0}
 if opts.calpar != None: #create g0 if txt file is provided
@@ -195,7 +203,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     print 'generating info:'
     filter_length = None
     if not opts.flength == None: filter_length = float(opts.flength)
-    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, crosspols=[p])
+    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, ex_bls=ex_bls, crosspols=[p])
 
     reds = info.get_reds()
     ### Omnical-ing! Loop Through Compressed Files ###

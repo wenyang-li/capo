@@ -109,7 +109,7 @@ def aa_to_info(aa, pols=['x'], fcal=False, **kwargs):
     return info
 
 #generate info from perfect positions
-def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, **kwargs):
+def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, ex_bls=[], **kwargs):
 ### the position is a dictionary, containing only antennas involved in redundant groups.    ###
 ### position dict should have keys of ant inds, with values of ideal positions, and cable   ###
 ### lengths, and a key named 'nant', indicate the number of total antennas across the array ###
@@ -143,6 +143,8 @@ def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, **kwargs):
             length = np.linalg.norm(antpos[blj]-antpos[bli])
             if length < filter_length: ubls.append((bli,blj))
         kwargs['ubls'] = kwargs.get('ubls',[]) + ubls
+    if len(ex_bls) > 0:
+        kwargs['ex_bls'] = kwargs.get('ex_bls',[]) + ex_bls
     ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
     kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
     reds = filter_reds(reds, **kwargs)
