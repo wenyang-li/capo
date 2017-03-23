@@ -239,9 +239,9 @@ def diagnostic(infodict):
             except(KeyError): stack_data.append(data[bl[::-1]][p][0]/(g2[p[0]][bl[1]][0]*g2[p[0]][bl[0]][0].conj()))
         stack_data = np.array(stack_data)
         stack_bl = np.array(stack_bl)
-        vis_std = np.std(stack_data,axis=0)
-        vis_ave = np.mean(stack_data,axis=0)
-        n_sigmas = np.mean(np.abs(stack_data-vis_ave)/vis_std,axis=1)
+        vis_std = np.nanstd(stack_data,axis=0)
+        vis_ave = np.nanmean(stack_data,axis=0)
+        n_sigmas = np.nanmean(np.abs(stack_data-vis_ave)/vis_std,axis=1)
         ind = np.where(n_sigmas > opts.sigma_tol)
         for ii in ind[0]: exclude_bls.append(stack_bl[ii])
     return exclude_bls
