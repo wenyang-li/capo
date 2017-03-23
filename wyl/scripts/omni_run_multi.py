@@ -58,7 +58,7 @@ o.add_option('--y_wgt', dest='y_wgt', default=0, type='float',
              help='weight visbilities for y pol by num of bls in each ubl gp, by the order of y_wgt')
 o.add_option('--min_size', dest='min_size', default=40, type='int',
              help='minimun size of redundant groups to use to do diagnostic')
-o.add_option('--sigma_tol', dest='sigma_tol', default=3.0, type='float',
+o.add_option('--sigma_tol', dest='sigma_tol', default=2.0, type='float',
              help='The tolerance of excluding bad vis data in diagnostic')
 opts,args = o.parse_args(sys.argv[1:])
 
@@ -243,7 +243,7 @@ def diagnostic(infodict):
         vis_ave = np.nanmean(stack_data,axis=0)
         n_sigmas = np.nanmean(np.abs(stack_data-vis_ave)/vis_std,axis=1)
         ind = np.where(n_sigmas > opts.sigma_tol)
-        for ii in ind[0]: exclude_bls.append(stack_bl[ii])
+        for ii in ind[0]: exclude_bls.append(tuple(stack_bl[ii]))
     return exclude_bls
 
 
@@ -387,6 +387,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     m2['jds'] = t_jd
     m2['lsts'] = t_lst
     m2['freqs'] = freqs
+    m2['ex_bls'] = infodict['ex_bls']
     if opts.instru == 'mwa':
         print '   start non-hex tiles calibration using fhd model'
         g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
@@ -449,7 +450,7 @@ for f,filename in enumerate(args):
     par1 = Pool(2)
     list_exclude_bls = par1.map(diagnostic, info_dict)
     par1.close()
-    print list_exclude_bls
+    print '   excluded baselines:', list_exclude_bls
     for ii in range(len(info_dict)): info_dict[ii]['ex_bls'] = list_exclude_bls[ii]
     print "  Start Calibration:"
     par2 = Pool(2)

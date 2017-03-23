@@ -237,7 +237,7 @@ def to_npz(filename, meta, gains, vismdl, xtalk):
     '''Write results from omnical.calib.redcal (meta,gains,vismdl,xtalk) to npz file.
     Each of these is assumed to be a dict keyed by pol, and then by bl/ant/keyword'''
     d = {}
-    metakeys = ['jds','lsts','freqs','history']#,chisq]
+    metakeys = ['jds','lsts','freqs','history','ex_bls']#,chisq]
     for key in meta:
         if key.startswith('chisq'): d[key] = meta[key] #separate if statements  pending changes to chisqs
         for k in metakeys: 
@@ -315,7 +315,7 @@ def from_npz(filename, pols=None, bls=None, ants=None, verbose=False):
         #     pol,ant = k[-1:],int(k[:-1])
         #     if not gains.has_key(pol): gains[pol] = {}
         #     gains[pol][ant] = gains[pol].get(ant,[]) + [np.copy(npz[k])]
-        kws = ['chi','hist','j','l','f']
+        kws = ['chi','hist','j','l','f','ex_bls']
         for kw in kws:
             for k in [f for f in npz.files if f.startswith(kw)]:
                 meta[k] = meta.get(k,[]) + [np.copy(npz[k])]
