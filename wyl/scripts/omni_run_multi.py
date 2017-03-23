@@ -242,7 +242,7 @@ def diagnostic(infodict):
         vis_std = np.nanstd(stack_data,axis=0)
         vis_ave = np.nanmean(stack_data,axis=0)
         n_sigmas = np.nanmean(np.abs(stack_data-vis_ave)/vis_std,axis=1)
-        ind = np.where(n_sigmas > opts.sigma_tol)
+        ind = np.where(n_sigmas > float(opts.sigma_tol))
         for ii in ind[0]: exclude_bls.append(tuple(stack_bl[ii]))
     return exclude_bls
 
