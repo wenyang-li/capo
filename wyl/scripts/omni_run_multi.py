@@ -56,6 +56,10 @@ o.add_option('--x_wgt', dest='x_wgt', default=0, type='float',
              help='weight visbilities for x pol by num of bls in each ubl gp, to the order of x_wgt')
 o.add_option('--y_wgt', dest='y_wgt', default=0, type='float',
              help='weight visbilities for y pol by num of bls in each ubl gp, by the order of y_wgt')
+o.add_option('--min_size', dest='min_size', default=40, type='int',
+             help='minimun size of redundant groups to use to do diagnostic')
+o.add_option('--sigma_tol', dest='sigma_tol', default=3.0, type='float',
+             help='The tolerance of excluding bad vis data in diagnostic')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -187,6 +191,64 @@ if opts.instru == 'mwa':
     model_files = glob.glob(opts.fhdpath+'vis_data/'+args[0]+'*') + glob.glob(opts.fhdpath+'metadata/'+args[0]+'*')
     model_dict = capo.wyl.uv_read_omni([model_files],filetype='fhd', antstr='cross', p_list=pols, use_model=True)
 #################################################################################################
+
+def diagnostic(infodict):
+    min_size_bl_gp = int(opts.min_size)
+    exclude_bls = []
+    g0 = infodict['g0']
+    p = infodict['pol']
+    d = infodict['data']
+    f = infodict['flag']
+    freqs = infodict['freqs']
+    ex_ants = infodict['ex_ants']
+    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), ex_ants=ex_ants, crosspols=[p])
+    reds = info.get_reds()
+    data = {}
+    for bl in d.keys():
+        i,j = bl
+        if not (i in info.subsetant and j in info.subsetant): continue
+        m = np.ma.masked_array(d[bl][p],mask=f[bl][p])
+        m = np.mean(m,axis=0)
+        data[bl] = {p: np.complex64(m.data.reshape(1,-1))}
+    #if txt file or first cal is not provided, g0 is initiated here, with all of them to be 1.0
+    if opts.calpar == None:
+        if not g0.has_key(p[0]): g0[p[0]] = {}
+            for iant in range(0, ginfo[0]):
+                g0[p[0]][iant] = np.ones((1,ginfo[2]))
+                if opts.initauto: g0[p[0]][iant] *= auto[iant]
+                if opts.tave: g0[p[0]][iant] = np.mean(g0[p[0]][iant],axis=0)
+    elif opts.calpar.endswith('.sav'):
+        for key in g0[p[0]].keys():
+            g0_temp = g0[p[0]][key]
+                if opts.tave: g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
+                else: g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
+    elif opts.calpar.endswith('.npz'):
+        for key in g0[p[0]].keys():
+            g0_temp = g0[p[0]][key]
+            if opts.tave: g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
+            else: g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
+            if opts.initauto: g0[p[0]][key] *= auto[key]
+    m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen)
+    m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
+    for r in reds:
+        if len(r) < min_size_bl_gp: continue
+        stack_data = []
+        stack_bl = []
+        for bl in r:
+            stack_bl.append(bl)
+            try: stack_data.append(data[bl][0]/(g2[p[0]][bl[0]]*g2[p[0]][bl[1]].conj()))
+            except(KeyError): stack_data.append(data[bl::-1]/(g2[p[0]][bl[1]]*g2[p[0]][bl[0]].conj()))
+        stack_data = np.array(stack_data)
+        stack_bl = np.array(stack_bl)
+        vis_std = np.std(stack_data,axis=0)
+        vis_ave = np.mean(stack_data,axis=0)
+        n_sigmas = np.mean(np.abs(stack_data-vis_ave)/vis_std,axis=1)
+        ind = np.where(n_sigmas > opts.sigma_tol)
+        for ii in ind[0]: exclude_bls.append(stack_bl[ii])
+    return exclude_bls
+
+
+
 def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol, auto_corr]
     filename = infodict['filename']
     g0 = infodict['g0']
@@ -199,11 +261,13 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     ex_ants = infodict['ex_ants']
     auto = infodict['auto_corr']
     mask_arr = infodict['mask']
+    for bl in ex_bls:
+        if not bl in infodict['ex_bls']: infodict['ex_bls'].append(bl)
     print 'Getting reds from calfile'
     print 'generating info:'
     filter_length = None
     if not opts.flength == None: filter_length = float(opts.flength)
-    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, ex_bls=ex_bls, crosspols=[p])
+    info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, ex_bls=infodict['ex_bls'], crosspols=[p])
 
     reds = info.get_reds()
     ### Omnical-ing! Loop Through Compressed Files ###
@@ -382,10 +446,16 @@ for f,filename in enumerate(args):
         print '   Excluding antennas:', ex_ants
 
         info_dict.append(infodict[p])
-    print "  Start Parallelism:"
-    par = Pool(2)
-    npzlist = par.map(calibration, info_dict)
-    par.close()
+    print "  Start Diagnostic:"
+    par1 = Pool(2)
+    list_exclude_bls = par1.map(diagnostic, info_dict)
+    par1.close()
+    print list_exclude_bls
+    for ii in range(len(info_dict)): info_dict[ii]['ex_bls'] = list_exclude_bls[ii]
+    print "  Start Calibration:"
+    par2 = Pool(2)
+    npzlist = par2.map(calibration, info_dict)
+    par2.close()
     name_dict = infodict['name_dict']
 
     if opts.iftxt: #if True, write npz gains to txt files
