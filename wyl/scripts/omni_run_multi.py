@@ -199,6 +199,7 @@ def diagnostic(infodict):
     p = infodict['pol']
     d = infodict['data']
     f = infodict['flag']
+    ginfo = infodict['ginfo']
     freqs = infodict['freqs']
     ex_ants = infodict['ex_ants']
     info = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), ex_ants=ex_ants, crosspols=[p])
@@ -213,15 +214,13 @@ def diagnostic(infodict):
     #if txt file or first cal is not provided, g0 is initiated here, with all of them to be 1.0
     if opts.calpar == None:
         if not g0.has_key(p[0]): g0[p[0]] = {}
-            for iant in range(0, ginfo[0]):
-                g0[p[0]][iant] = np.ones((1,ginfo[2]))
-                if opts.initauto: g0[p[0]][iant] *= auto[iant]
-                if opts.tave: g0[p[0]][iant] = np.mean(g0[p[0]][iant],axis=0)
+        for iant in range(0, ginfo[0]):
+            g0[p[0]][iant] = np.ones((1,ginfo[2]))
     elif opts.calpar.endswith('.sav'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
-                if opts.tave: g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
-                else: g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
+            if opts.tave: g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
+            else: g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
     elif opts.calpar.endswith('.npz'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
