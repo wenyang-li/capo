@@ -235,8 +235,8 @@ def diagnostic(infodict):
         stack_bl = []
         for bl in r:
             stack_bl.append(bl)
-            try: stack_data.append(data[bl][0]/(g2[p[0]][bl[0]]*g2[p[0]][bl[1]].conj()))
-            except(KeyError): stack_data.append(data[bl::-1]/(g2[p[0]][bl[1]]*g2[p[0]][bl[0]].conj()))
+            try: stack_data.append(data[bl][p][0]/(g2[p[0]][bl[0]][0]*g2[p[0]][bl[1]][0].conj()))
+            except(KeyError): stack_data.append(data[bl[::-1]][p][0]/(g2[p[0]][bl[1]][0]*g2[p[0]][bl[0]][0].conj()))
         stack_data = np.array(stack_data)
         stack_bl = np.array(stack_bl)
         vis_std = np.std(stack_data,axis=0)
