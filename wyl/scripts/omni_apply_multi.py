@@ -115,7 +115,11 @@ for f,filename in enumerate(args):
             meta,_,_,xtalk = capo.omni.from_npz(omnifile)
         else:
             meta,gains,_,xtalk = capo.omni.from_npz(omnifile) #loads npz outputs from omni_run
-        if opts.flag_bls: print '   bls to flag:', meta['ex_bls']
+        if opts.flag_bls:
+            ex_bls = []
+            for ii in range(meta['ex_bls'].shape[0]):
+                ex_bls.append(tuple(meta['ex_bls'][ii]))
+            print '   bls to flag:', ex_bls
 #********************** if choose to make sols smooth ***************************
         if opts.bpfit and opts.instru == 'mwa':
             print '   bandpass fitting'
@@ -136,7 +140,7 @@ for f,filename in enumerate(args):
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
             a2 = uvi.ant_2_array[ii]
-            if (a1,a2) in meta['ex_bls'] or (a2,a1) in meta['ex_bls']:
+            if (a1,a2) in ex_bls or (a2,a1) in ex_bls:
                 if opts.flag_bls: uvi.flag_array[:,0][:,:,pid][ii] = True
             p1,p2 = p
             ti = ii/Nbls
