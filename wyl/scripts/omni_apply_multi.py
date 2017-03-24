@@ -28,8 +28,8 @@ o.add_option('--intype', dest='intype', default=None, type='string',
              help='Type of the input file, .uvfits or fhd')
 o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
-o.add_option('--plot',dest='plot',default=False,action='store_true',
-             help='Toggle: Plot fitted bandpass if fit is on. Default=False')
+o.add_option('--flag_bls',dest='flag_bls',default=False,action='store_true',
+             help='Toggle: Flag baselines which are excluded by omnical. Default=False')
 o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_PhaseII/', type='string',
              help='path to metafits files')
 opts,args = o.parse_args(sys.argv[1:])
@@ -101,16 +101,21 @@ for f,filename in enumerate(args):
 
     #find npz for each pol, then apply
     for ip,p in enumerate(pols):
+        omnifile_ave = ''
         if not opts.npz == None:
             if opts.instru == 'mwa':
                 hdu = fits.open(opts.metafits+filename+'.metafits')
                 pointing = delays[hdu[0].header['DELAYS']]
-                omnifile = opts.npz + '_' + str(pointing) + '.' + p + '.npz'
-            else: omnifile = opts.npz + '.' + p + '.npz'
+                omnifile_ave = opts.npz + '_' + str(pointing) + '.' + p + '.npz'
+            else: omnifile_ave = opts.npz + '.' + p + '.npz'
+        omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
+        print '  Reading and applying:', omnifile, omnifile_ave
+        if not opts.npz == None:
+            _,gains,_,_ = capo.omni.from_npz(omnifile_ave)
+            meta,_,_,xtalk = capo.omni.from_npz(omnifile)
         else:
-            omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
-        print '  Reading and applying:', omnifile
-        _,gains,_,xtalk = capo.omni.from_npz(omnifile) #loads npz outputs from omni_run
+            meta,gains,_,xtalk = capo.omni.from_npz(omnifile) #loads npz outputs from omni_run
+        if opts.flag_bls: print '   bls to flag:', meta['ex_bls']
 #********************** if choose to make sols smooth ***************************
         if opts.bpfit and opts.instru == 'mwa':
             print '   bandpass fitting'
@@ -131,6 +136,8 @@ for f,filename in enumerate(args):
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
             a2 = uvi.ant_2_array[ii]
+            if (a1,a2) in meta['ex_bls'] or (a2,a1) in meta['ex_bls']:
+                if opts.flag_bls: uvi.flag_array[:,0][:,:,pid][ii] = True
             p1,p2 = p
             ti = ii/Nbls
                 #for jj in range(0,Nfreqs):
