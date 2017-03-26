@@ -373,15 +373,16 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
                 if ff%16 in [0,15]:
                     g2[p[0]][a][:,ff] = 0
                     degen_proj[a][:,ff] = np.inf    #clean nans
-            if opts.tave:
-                g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
-            else:
-                g_temp = np.ma.masked_array(g2[p[0]][a],mask_arr,fill_value=1.0)
-                g_temp = np.mean(g_temp,axis=0)
-                g2[p[0]][a] = np.resize(g_temp.data,(ginfo[1],ginfo[2]))
         for bl in v2[p].keys():
             i,j = bl
             v2[p][bl] /= (degen_proj[j].conj()*degen_proj[i])
+    for a in g2[p[0]].keys():
+        if opts.tave:
+            g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[1],ginfo[2]))
+        else:
+            g_temp = np.ma.masked_array(g2[p[0]][a],mask_arr,fill_value=1.0)
+            g_temp = np.mean(g_temp,axis=0)
+            g2[p[0]][a] = np.resize(g_temp.data,(ginfo[1],ginfo[2]))
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
