@@ -143,7 +143,7 @@ for f,filename in enumerate(args):
             if (a1,a2) in ex_bls or (a2,a1) in ex_bls:
                 if opts.flag_bls: uvi.flag_array[:,0][:,:,pid][ii] = True
             p1,p2 = p
-            ti = ii/Nbls
+#            ti = ii/Nbls
                 #for jj in range(0,Nfreqs):
             if opts.xtalk:
                 try: uvi.data_array[:,0][:,:,pid][ii] -= xtalk[p][(a1,a2)]
@@ -151,11 +151,11 @@ for f,filename in enumerate(args):
                     try: uvi.data_array[:,0][:,:,pid][ii] -= xtalk[p][(a2,a1)].conj()
                     except(KeyError): pass
             try:
-                uvi.data_array[:,0][:,:,pid][ii][fuse] /= gains[p1][a1][ti][fuse]
+                uvi.data_array[:,0][:,:,pid][ii][fuse] /= gains[p1][a1][fuse]
                 uvi.data_array[:,0][:,:,pid][ii] *= fqs
             except(KeyError): pass
             try:
-                uvi.data_array[:,0][:,:,pid][ii][fuse] /= gains[p2][a2][ti][fuse].conj()
+                uvi.data_array[:,0][:,:,pid][ii][fuse] /= gains[p2][a2][fuse].conj()
                 uvi.data_array[:,0][:,:,pid][ii] *= fqs
             except(KeyError): pass
 

@@ -376,7 +376,8 @@ def mwa_bandpass_fit(gains, tile_info, amp_order=2, phs_order=1, band = 'high'):
         for ant in gains[p].keys():
             cable = tile_info[ant]['cable']
             if not bandpass.has_key(cable): bandpass[cable] = {}
-            bandpass[cable][ant] = np.mean(gains[p][ant][1:53],axis=0)
+            bandpass[cable][ant] = gains[p][ant]
+#            bandpass[cable][ant] = np.mean(gains[p][ant][1:53],axis=0)
             SH = gains[p][ant].shape
         global_bp = {}
         freq = np.arange(384)
@@ -432,7 +433,8 @@ def poly_bandpass_fit(gains,amp_order=9, phs_order=1,instru='mwa'):
     for p in gains.keys():
         for a in gains[p].keys():
             SH = gains[p][a].shape
-            g = np.mean(gains[p][a],axis=0)
+            g = copy.copy(gains[p][a])
+#            g = np.mean(gains[p][a],axis=0)
             fqs = np.arange(g.size)
             fuse = []
             for ff in range(g.size):
@@ -634,8 +636,7 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[]):
                 den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dw,axis=0)
             if np.nansum(den) == 0: continue
             den[fqflag] = 1
-            g = nur/den + 1.j*nui/den
-            g3[p][a1] = np.resize(g,SH)
+            g3[p][a1] = nur/den + 1.j*nui/den
     return g3
 
 
