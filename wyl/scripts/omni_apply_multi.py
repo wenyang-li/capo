@@ -21,7 +21,7 @@ o.add_option('--polyfit',dest='polyfit',default=False,action='store_true',
 o.add_option('--omnipath',dest='omnipath',default='%s.npz',type='string',
             help='Format string (e.g. "path/%s.npz", where you actually type the "%s") which converts the input file name to the omnical npz path/file.')
 o.add_option('--npz',dest='npz',default=None,type='string',
-             help='specify npz file names, (format: path/name, without .pol.npz), otherwise find npz according to obsid and omnipath')
+             help='specify npz file names for gain solutions, (format: path/name, without .pol.npz), otherwise read gain solutions from npz according to obsid and omnipath')
 o.add_option('--outtype', dest='outtype', default='uvfits', type='string',
              help='Type of the output file, .uvfits, or miriad, or fhd')
 o.add_option('--intype', dest='intype', default=None, type='string',
@@ -30,8 +30,10 @@ o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
 o.add_option('--flag_bls',dest='flag_bls',default=False,action='store_true',
              help='Toggle: Flag baselines which are excluded by omnical. Default=False')
-o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_PhaseII/', type='string',
+o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/Nov2016EoR0/', type='string',
              help='path to metafits files')
+o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_Longrun_EoR0/', type='string',
+             help='path to fhd dir for fhd output visibilities if ftype is fhd.')
 opts,args = o.parse_args(sys.argv[1:])
 
 delays = {
@@ -57,8 +59,7 @@ files = {}
 for filename in args:
     if opts.intype == 'fhd':
         files[filename] = []
-        obs = filename + '*'
-        filelist = glob.glob(obs)
+        filelist = glob.glob(opts.fhdpath+'/vis_data/'+filename+'*')+glob.glob(opts.fhdpath+'/metadata/'+filename+'*')
         files[filename] = filelist
     elif opts.intype == 'uvfits':
         files[filename] = filename + '.uvfits'

@@ -46,9 +46,9 @@ o.add_option('--divauto', dest='divauto', default=False, action='store_true',
              help='Toggle: use auto corr to weight visibilities before cal')
 o.add_option('--smooth', dest='smooth', default=False, action='store_true',
              help='Toggle: smooth data before cal by removing any signal beyond horizon, need divauto on')
-o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_EoR0/', type='string',
-             help='path to fhd solutions for projecting degen parameters. Default=/path/to/calibration/')
-o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/EoR0_PhaseII/', type='string',
+o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_Longrun_EoR0/', type='string',
+             help='path to fhd dir for projecting degen parameters, or fhd output visibilities if ftype is fhd.')
+o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/Nov2016EoR0/', type='string',
              help='path to metafits files')
 o.add_option('--ex_dipole', dest='ex_dipole', default=False, action='store_true',
              help='Toggle: exclude tiles which have dead dipoles')
@@ -166,15 +166,14 @@ for filename in args:
     elif opts.ftype == 'uvfits':
         files[filename][filename] = filename + '.uvfits'
     elif opts.ftype == 'fhd':
-        obs = filename + '*'
-        filelist = glob.glob(obs)
+        filelist = glob.glob(opts.fhdpath+'/vis_data/'+filename+'*')+glob.glob(opts.fhdpath+'/metadata/'+filename+'*')
         if len(pols) == 1:
             p = pols[0]
             if p == 'xx':
-                try: filelist.remove(filename + '_vis_YY.sav')
+                try: filelist.remove(opts.fhdpath+'/vis_data/'+filename + '_vis_YY.sav')
                 except: pass
             elif p == 'yy':
-                try: filelist.remove(filename + '_vis_XX.sav')
+                try: filelist.remove(opts.fhdpath+'/vis_data/'+filename + '_vis_XX.sav')
                 except: pass
             else:
                 raise IOError('do not support cross pol')
