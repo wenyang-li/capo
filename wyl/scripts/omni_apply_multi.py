@@ -77,11 +77,12 @@ for f,filename in enumerate(args):
     
     #create an out put filename
     if opts.outtype == 'uvfits':
-        suffix = 'O'
+        if opts.intype == 'fhd': suffix = 'FO'
+        else: suffix = 'O'
         if opts.bpfit:
-            suffix = 'bpfit' + suffix
+            suffix = suffix + 'B'
         if opts.polyfit:
-            suffix = 'polyfit' + suffix
+            suffix = suffix + 'P'
         newfile = filename + '_' + suffix + '.uvfits'
     if os.path.exists(newfile):
         print '    %s exists.  Skipping...' % newfile
