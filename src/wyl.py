@@ -537,6 +537,7 @@ def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
             phix = np.array(slp1)
             phiy = (np.array(slp2) - phix)/np.sqrt(3)
             for a in omni[p].keys():
+                if np.isnan(np.mean(fhd[p][a])): continue
                 dx = realpos[a]['top_x'] - realpos[ref_antenna]['top_x']
                 dy = realpos[a]['top_y'] - realpos[ref_antenna]['top_y']
                 proj = np.exp(1j*(dx*phix+dy*phiy))
