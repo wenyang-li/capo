@@ -508,6 +508,7 @@ def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
                     x,tau = [],[]
                     for ii in inds:
                         if not ii in omni[p].keys(): continue
+                        if np.isnan(fhd[p][ii][ff]): continue
                         x.append(realpos[ii]['top_x'])
                         tau.append(np.angle(fhd[p][ii][ff]/omni[p][ii][tt][ff]))
                     tau = np.unwrap(tau)
@@ -522,6 +523,7 @@ def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
                     x,tau = [],[]
                     for ii in inds:
                         if not ii in omni[p].keys(): continue
+                        if np.isnan(fhd[p][ii][ff]): continue
                         x.append(realpos[ii]['top_x'])
                         tau.append(np.angle(fhd[p][ii][ff]/omni[p][ii][tt][ff]))
                     tau = np.unwrap(tau)
