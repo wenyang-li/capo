@@ -605,13 +605,15 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
                     r[a][tt] /= factor
     return proj
 
-def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[]):
+def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[],maxiter=50):
     fqflag = []
     for ii in range(384):
         if ii%16 in [0,15]: fqflag.append(ii)
+    h = {}
+    gt = {}
     g3 = {}
     for p in g2.keys():
-        g3[p] = {}
+        g3[p],gt[p],h[p] = {},{},{}
         a = g2[p].keys()[0]
         SH = g2[p][a].shape
         pp = p+p
@@ -632,14 +634,49 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[]):
                     dm = mvis[bl][pp]*(g2[p][a2].conj())
                     dw = np.logical_not(mwgt[bl][pp])
                 except(KeyError):
-                    dm = mvis[bl[::-1]][pp].conj()*g2[p][a2]
+                    dm = mvis[bl[::-1]][pp].conj()*(g2[p][a2].conj())
                     dw = np.logical_not(mwgt[bl[::-1]][pp])
                 nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)*dw,axis=0)
                 nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)*dw,axis=0)
                 den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dw,axis=0)
             if np.nansum(den) == 0: continue
-            den[fqflag] = 1
-            g3[p][a1] = nur/den + 1.j*nui/den
+            h[p][a1] = {}
+            h[p][a1]['num'] = nur + 1.j*nui
+            h[p][a1]['den'] = den
+            den[fqflag] = 1e-7
+            gt[p][a1] = nur/den + 1.j*nui/den
+        for iter in range(maxiter):
+            conv = 0
+            for a1 in gt[p].keys():
+                nur,nui,den = 0,0,0
+                nur += h[p][a1]['num'].real
+                nui += h[p][a1]['num'].imag
+                den += h[p][a1]['den']
+                for a2 in gt[p].keys():
+                    sep = np.array([realpos[a2]['top_x']-realpos[a1]['top_x'],
+                                    realpos[a2]['top_y']-realpos[a1]['top_y'],
+                                    realpos[a2]['top_z']-realpos[a1]['top_z']])
+                    if np.linalg.norm(sep) < 50*3e8/np.max(model_dict['freqs']): continue
+                    bl = (a1,a2)
+                    try: dv = data[bl][pp]
+                    except(KeyError): dv = data[bl[::-1]][pp].conj()
+                    try:
+                        dm = mvis[bl][pp]*(gt[p][a2].conj())
+                        dw = np.logical_not(mwgt[bl][pp])
+                    except(KeyError):
+                        dm = mvis[bl[::-1]][pp].conj()*(gt[p][a2].conj())
+                        dw = np.logical_not(mwgt[bl[::-1]][pp])
+                    nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)*dw,axis=0)
+                    nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)*dw,axis=0)
+                    den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dw,axis=0)
+                den[fqflag] = 1e-7
+                g3[p][a1] = nur/den + 1.j*nui/den
+                conv += np.nanmean(np.abs(g3[p][a1]-gt[p][a1]))
+            if conv < 1e-2:
+                print 'maxiter and conv for non-hex cal:',iter,conv
+                break
+            else:
+                for a in gt[p].keys(): gt[p][a] = copy.copy(g3[p][a])
     return g3
 
 
