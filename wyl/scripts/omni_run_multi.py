@@ -60,7 +60,7 @@ o.add_option('--min_size', dest='min_size', default=40, type='int',
              help='minimun size of redundant groups to use to do diagnostic')
 o.add_option('--sigma_tol', dest='sigma_tol', default=2.0, type='float',
              help='The tolerance of excluding bad vis data in diagnostic')
-o.add_option('--snr', dest='snr', default=1.8, type='float',
+o.add_option('--snr', dest='snr', default=0.5, type='float',
              help='The tolerance of SNR for excluding bad red gp in diagnostic')
 opts,args = o.parse_args(sys.argv[1:])
 
