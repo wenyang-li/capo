@@ -60,6 +60,8 @@ o.add_option('--min_size', dest='min_size', default=40, type='int',
              help='minimun size of redundant groups to use to do diagnostic')
 o.add_option('--sigma_tol', dest='sigma_tol', default=2.0, type='float',
              help='The tolerance of excluding bad vis data in diagnostic')
+o.add_option('--snr', dest='snr', default=1.8, type='float',
+             help='The tolerance of SNR for excluding bad red gp in diagnostic')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -240,9 +242,12 @@ def diagnostic(infodict):
         stack_bl = np.array(stack_bl)
         vis_std = np.nanstd(stack_data,axis=0)
         vis_ave = np.nanmean(stack_data,axis=0)
-        n_sigmas = np.nanmean(np.abs(stack_data-vis_ave)/vis_std,axis=1)
-        ind = np.where(n_sigmas > float(opts.sigma_tol))
-        for ii in ind[0]: exclude_bls.append(tuple(stack_bl[ii]))
+        nonzero = np.where(vis_std>0)
+        if np.mean(np.abs(vis_ave)[nonzero]/vis_std[nonzero]) < opts.snr: exclude_bls = exclude_bls + r
+        else:
+            n_sigmas = np.nanmean(np.abs(stack_data-vis_ave)/vis_std,axis=1)
+            ind = np.where(n_sigmas > float(opts.sigma_tol))
+            for ii in ind[0]: exclude_bls.append(tuple(stack_bl[ii]))
     return exclude_bls
 
 
