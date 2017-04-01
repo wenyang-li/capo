@@ -103,6 +103,7 @@ for f,filename in enumerate(args):
 
     #find npz for each pol, then apply
     for ip,p in enumerate(pols):
+        pid = np.where(pollist == aipy.miriad.str2pol[p])[0][0]
         omnifile_ave = ''
         if not opts.npz == None:
             if opts.instru == 'mwa':
@@ -126,7 +127,14 @@ for f,filename in enumerate(args):
         if opts.bpfit and opts.instru == 'mwa':
             print '   bandpass fitting'
             exec('from %s import tile_info'% opts.cal)
-            gains = capo.wyl.mwa_bandpass_fit(gains,tile_info)
+            auto = {}
+            bi = 128*uvi.ant_1_array+uvi.ant_2_array
+            for a in gains[p[0]].keys():
+                auto_inds = np.where(bi==128*a+a)
+                auto_corr = uvi.data_array[auto_inds][:,0][:,:,pid].real
+                auto[a] = np.mean(np.sqrt(auto_corr)[1:-2],axis=0)
+                auto[a] /= np.mean(auto[a])
+            gains = capo.wyl.mwa_bandpass_fit(gains,auto,tile_info)
         if opts.polyfit:
             print '   polyfitting'
             gains = capo.wyl.poly_bandpass_fit(gains,instru=opts.instru)
@@ -138,7 +146,6 @@ for f,filename in enumerate(args):
             for ii in range(384):
                 if ii%16 in [0,15]: fqs[ii] = 0
                 else: fuse.append(ii)
-        pid = np.where(pollist == aipy.miriad.str2pol[p])[0][0]
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
             a2 = uvi.ant_2_array[ii]

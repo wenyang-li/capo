@@ -366,68 +366,38 @@ def polyfunc(x,z):
     return sum
 
 
-def mwa_bandpass_fit(gains, tile_info, amp_order=2, phs_order=1, band = 'high'):
-    if band.lower() == 'high':
-        fqs = np.linspace(167.075,197.715,384)
-    elif band.lower() == 'low':
-        fqs = np.linspace(138.995,169.635,384)
+def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
+    fqs = np.linspace(167.075,197.715,384)
+    freq = np.arange(384)
+    fuse = []
+    for ii in range(384):
+        if not ii%16 in [0,15]: fuse.append(ii)
     for p in gains.keys():
-        bandpass = {}
         for ant in gains[p].keys():
+            x = np.array(fuse)
+            y1 = np.abs(gains[p][ant][fuse]/auto[ant][fuse])
+            y2 = np.angle(gains[p][ant][fuse])
+            y2 = np.unwrap(y2)
+            z1 = np.polyfit(x,y1,amp_order)
+            z2 = np.polyfit(x,y2,phs_order)
+            rp = np.ones((384),dtype=np.complex)
             cable = tile_info[ant]['cable']
-            if not bandpass.has_key(cable): bandpass[cable] = {}
-            bandpass[cable][ant] = gains[p][ant]
-#            bandpass[cable][ant] = np.mean(gains[p][ant][1:53],axis=0)
-            SH = gains[p][ant].shape
-        global_bp = {}
-        freq = np.arange(384)
-        fuse = []
-        for ii in range(384):
-            if not ii%16 in [0,15]: fuse.append(ii)
-        for length in bandpass.keys():
-            amp = []
-            for ant in bandpass[length].keys():
-                normbp = np.abs(bandpass[length][ant])/np.mean(np.abs(bandpass[length][ant][fuse]))
-                amp.append(normbp)
-            amp = np.array(amp)
-            global_bp[length] = np.mean(amp,axis=0)
-        residual = {}
-        for length in global_bp.keys():
-            residual[length] = {}
-            for ant in bandpass[length].keys():
-                residual[length][ant] = bandpass[length][ant]/global_bp[length]
-        fitamp,fitphs = {},{}
-        for length in residual.keys():
-            for ant in residual[length].keys():
-                x = np.array(fuse)
-                y1 = np.abs(residual[length][ant][fuse])
-                y2 = np.angle(residual[length][ant][fuse])
-                y2 = np.unwrap(y2)
-                z1 = np.polyfit(x,y1,amp_order)
-                z2 = np.polyfit(x,y2,phs_order)
-                fitamp[ant] = z1
-                fitphs[ant] = z2
-        for length in bandpass.keys():
-            if length == 150:
-                for ant in bandpass[length].keys():
-                    g = global_bp[length]*polyfunc(freq,fitamp[ant])*np.exp(1j*polyfunc(freq,fitphs[ant]))
-                    r = np.mean(gains[p][ant][1:53],axis=0)/g - 1
-                    for ii in range(0,384):
-                        if ii%16 == 0: r[ii] = r[ii+1]
-                        if ii%16 ==15: r[ii] = r[ii-1]
-                    tau = np.fft.fftfreq(384,(fqs[-1]-fqs[0])/384)
-                    delay = np.fft.fft(r,n=384)
-                    inds = np.where(abs(np.abs(tau)-1)<0.3)[0]
-                    ind = np.where(np.abs(delay)==np.max(np.abs(delay[inds])))[0]
-                    for ii in range(delay.size):
-                        if not ii in ind: delay[ii] = 0
-                    reflect = np.fft.ifft(delay,n=384) + 1
-                    gains[p][ant] = np.resize(g*reflect,SH)
-            else:
-                for ant in bandpass[length].keys():
-                    g = global_bp[length]*polyfunc(freq,fitamp[ant])*np.exp(1j*polyfunc(freq,fitphs[ant]))
-                    gains[p][ant] = np.resize(g,SH)
-        return gains
+            if cable == 150:
+                rp[fuse] = np.exp(1j*(y2-z2[0]*x-z2[1]))
+                cable = tile_info[ant]['cable']
+                tau = np.fft.fftfreq(384,(fqs[-1]-fqs[0])/384)
+                fftrp = np.fft.fft(rp,n=384)
+                inds = np.where(abs(np.abs(tau)-1)<0.3)
+                imax = np.where(np.abs(fftrp)==np.max(np.abs(fftrp[inds])))
+                ind = np.where(np.abs(tau)==np.abs(tau[imax][0]))
+                mask =np.zeros((384))
+                mask[ind] = 1.
+                mask[0] = 1.
+                fftrp *= mask
+                rp = np.fft.ifft(fftrp)
+            gains[p][ant] = auto[ant]*polyfunc(freq,z1)*np.exp(1j*polyfunc(freq,z2))*rp
+    return gains
+
 
 def poly_bandpass_fit(gains,amp_order=9, phs_order=1,instru='mwa'):
     for p in gains.keys():
