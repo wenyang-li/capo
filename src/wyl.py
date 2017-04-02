@@ -366,7 +366,7 @@ def polyfunc(x,z):
     return sum
 
 
-def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
+def mwa_bandpass_fit(gains, auto, tile_info, amp_order=9, phs_order=1):
     fqs = np.linspace(167.075,197.715,384)
     freq = np.arange(384)
     fuse = []
