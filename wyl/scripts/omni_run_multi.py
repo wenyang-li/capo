@@ -385,7 +385,15 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[2]))
         else:
             g_temp = np.ma.masked_array(g2[p[0]][a],mask_arr,fill_value=1.0)
-            g_temp = np.mean(g_temp,axis=0)
+            chi_key = 'chisq'+str(a)+p[0]
+            zero_ind = np.where(m2[chi_key]) == 0
+            m2[chi_key][zero_ind] = np.inf
+            chisq = (1./m2[chi_key])*np.logical_not(mask_arr)
+            chi_norm = np.linalg.norm(chisq,axis=0)
+            nonzero = np.where(chi_norm>0)
+            chisq[nonzero] /= chi_norm[nonzero]
+            g_temp *= chisq
+            g_temp = np.sum(g_temp,axis=0)
             g2[p[0]][a] = g_temp.data
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
