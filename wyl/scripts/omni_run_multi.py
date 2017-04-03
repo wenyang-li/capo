@@ -220,13 +220,11 @@ def diagnostic(infodict):
     elif opts.calpar.endswith('.sav'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
-            if opts.tave: g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
-            else: g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
+            g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
     elif opts.calpar.endswith('.npz'):
         for key in g0[p[0]].keys():
             g0_temp = g0[p[0]][key]
-            if opts.tave: g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
-            else: g0[p[0]][key] = np.resize(g0_temp,(ginfo[1],ginfo[2]))
+            g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
             if opts.initauto: g0[p[0]][key] *= auto[key]
     m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen)
     m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
