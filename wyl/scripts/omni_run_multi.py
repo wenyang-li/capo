@@ -384,12 +384,12 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         else:
             g_temp = np.ma.masked_array(g2[p[0]][a],mask_arr,fill_value=1.0)
             chi_key = 'chisq'+str(a)+p[0]
-            zero_ind = np.where(m2[chi_key]) == 0
+            zero_ind = np.where(m2[chi_key] == 0)
             m2[chi_key][zero_ind] = np.inf
             chisq = (1./m2[chi_key])*np.logical_not(mask_arr)
-            chi_norm = np.linalg.norm(chisq,axis=0)
+            chi_norm = np.sum(chisq,axis=0)
             nonzero = np.where(chi_norm>0)
-            chisq[nonzero] /= chi_norm[nonzero]
+            chisq[:,nonzero[0]] /= chi_norm[nonzero]
             g_temp *= chisq
             g_temp = np.sum(g_temp,axis=0)
             g2[p[0]][a] = g_temp.data
