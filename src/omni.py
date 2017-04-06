@@ -156,7 +156,7 @@ def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, ex_bls=[],
     return info
 
 
-def cal_reds_from_pos(position):
+def cal_reds_from_pos(position,ex_ants=[],ex_bls=[]):
     nant = position['nant']
     antpos = -np.ones((nant,3))
     xmin = 0
@@ -174,8 +174,8 @@ def cal_reds_from_pos(position):
         i = ant
         antpos[i,0],antpos[i,1],antpos[i,2] = x,y,z
     reds = omnical.arrayinfo.compute_reds(antpos,tol=0.01)
-    ex_ants = [i for i in range(antpos.shape[0]) if antpos[i,0] < 0]
-    reds = omnical.arrayinfo.filter_reds(reds,ex_ants=ex_ants)
+    ex_ants = ex_ants + [i for i in range(antpos.shape[0]) if antpos[i,0] < 0]
+    reds = omnical.arrayinfo.filter_reds(reds,ex_ants=ex_ants,ex_bls=ex_bls)
     return reds
 
 
