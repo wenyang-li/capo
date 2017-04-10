@@ -52,10 +52,6 @@ o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/Nov20
              help='path to metafits files')
 o.add_option('--ex_dipole', dest='ex_dipole', default=False, action='store_true',
              help='Toggle: exclude tiles which have dead dipoles')
-o.add_option('--x_wgt', dest='x_wgt', default=0, type='float',
-             help='weight visbilities for x pol by num of bls in each ubl gp, to the order of x_wgt')
-o.add_option('--y_wgt', dest='y_wgt', default=0, type='float',
-             help='weight visbilities for y pol by num of bls in each ubl gp, by the order of y_wgt')
 o.add_option('--min_size', dest='min_size', default=40, type='int',
              help='minimun size of redundant groups to use to do diagnostic')
 o.add_option('--sigma_tol', dest='sigma_tol', default=2.0, type='float',
@@ -66,7 +62,6 @@ opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
 pols = opts.pol.split(',')
-bl_wgt = {'x': float(opts.x_wgt), 'y': float(opts.y_wgt)}
 files = {}
 #files=[]
 ex_bls = []
@@ -246,7 +241,7 @@ def diagnostic(infodict):
             n_sigmas = np.nanmean(np.abs(stack_data-vis_ave)/vis_std,axis=1)
             ind = np.where(n_sigmas > float(opts.sigma_tol))
             for ii in ind[0]: exclude_bls.append(tuple(stack_bl[ii]))
-    return exclude_bls
+    return [exclude_bls, g2]
 
 
 
@@ -262,6 +257,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     ex_ants = infodict['ex_ants']
     auto = infodict['auto_corr']
     mask_arr = infodict['mask']
+    amp_wgt = infodict['amp_wgt'][p[0]]
     for bl in ex_bls:
         if not bl in infodict['ex_bls']: infodict['ex_bls'].append(bl)
     print 'Getting reds from calfile'
@@ -309,12 +305,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             m = np.mean(m,axis=0)
             data[bl] = {p: np.complex64(m.data.reshape(1,-1))}
         else: data[bl] = {p: copy.copy(d[bl][p])}
-    # if weight data by baseline number in each ubl group:
-    if not bl_wgt[p[0]] == 0:
-        for r in reds:
-            for bl in r:
-                try: data[bl][p] *= np.power(1./float(len(r)),bl_wgt[p[0]])
-                except(KeyError): data[bl[::-1]][p] *= np.power(1./float(len(r)),bl_wgt[p[0]])
     # if weight antennas by auto corr:
     if opts.divauto:
         for bl in data.keys():
@@ -328,6 +318,10 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
                 inds = np.where(np.abs(tfq)>(np.linalg.norm(rij)/3e8+50e-9))
                 fftdata[:,inds]=0
                 data[bl][p] = np.complex64(np.fft.ifft(fftdata,axis=1))
+    else:
+        for bl in data.keys():
+            i,j = bl
+            data[bl][p] /= (np.abs(amp_wgt[i][0])*np.abs(amp_wgt[j][0]))
      #indexed by bl and then pol (backwards from everything else)
 
     wgts[p] = {} #weights dictionary by pol
@@ -341,11 +335,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if opts.divauto:
         for a in g2[p[0]].keys():
             g2[p[0]][a] *= auto[a]
-    if not bl_wgt[p[0]] == 0:
-        for bl in v2[p].keys():
-            for r in reds:
-                if bl in r or bl[::-1] in r:
-                    v2[p][bl] *= np.power(float(len(r)),bl_wgt[p[0]])
+    else:
+        for a in g2[p[0]].keys():
+            g2[p[0]][a] *= np.abs(amp_wgt[a][0])
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
 
     ############# To project out degeneracy parameters ####################
@@ -459,10 +451,12 @@ for f,filename in enumerate(args):
         info_dict.append(infodict[p])
     print "  Start Diagnostic:"
     par1 = Pool(2)
-    list_exclude_bls = par1.map(diagnostic, info_dict)
+    list_exclude_bls_g2 = par1.map(diagnostic, info_dict)
     par1.close()
-    print '   excluded baselines:', list_exclude_bls
-    for ii in range(len(info_dict)): info_dict[ii]['ex_bls'] = list_exclude_bls[ii]
+    for ii in range(len(info_dict)):
+        print '   excluded baselines:', list_exclude_bls_g2[ii][0]
+        info_dict[ii]['ex_bls'] = list_exclude_bls_g2[ii][0]
+        info_dict[ii]['amp_wgt'] = list_exclude_bls_g2[1]
     print "  Start Calibration:"
     par2 = Pool(2)
     npzlist = par2.map(calibration, info_dict)
