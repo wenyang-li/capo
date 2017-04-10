@@ -418,34 +418,47 @@ def poly_bandpass_fit(gains,amp_order=9, phs_order=1,instru='mwa'):
     return gains
 
 
-def ampproj(v2,model_dict,realpos,reds,tave=False):
+#def ampproj(v2,model_dict,realpos,reds,tave=False):
+#    amppar = {}
+#    for p in v2.keys():
+#        s1,s2 = 0,0
+#        mdata = model_dict[p]['data']
+#        mflag = model_dict[p]['flag']
+#        for bl in v2[p].keys():
+#            i,j = bl
+#            ri,rj = realpos[i],realpos[j]
+#            dr = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
+#            if np.linalg.norm(dr) < (50*3e8/180e6): continue
+#            for r in reds:
+#                if bl in r or bl[::-1] in r:
+#                    for rbl in r:
+#                        try:
+#                            marr = np.ma.masked_array(mdata[rbl][p],mflag[rbl][p])
+#                        except(KeyError):
+#                            marr = np.ma.masked_array(mdata[rbl[::-1]][p],mflag[rbl[::-1]][p])
+#                        if tave:
+#                            marr = np.mean(marr,axis=0)
+#                            marr = marr.reshape(1,-1)
+#                        s1 += (np.abs(v2[p][bl])*np.abs(marr.data)*np.logical_not(marr.mask))
+#                        s2 += (np.abs(marr.data)*np.abs(marr.data)*np.logical_not(marr.mask))
+#        ind = np.where(s2==0)
+#        s2[ind] = np.inf
+#        A = s1/s2
+#        amppar[p[0]] = np.sqrt(A)
+#    return amppar
+
+def ampproj(g2,fhd):
     amppar = {}
-    for p in v2.keys():
-        s1,s2 = 0,0
-        mdata = model_dict[p]['data']
-        mflag = model_dict[p]['flag']
-        for bl in v2[p].keys():
-            i,j = bl
-            ri,rj = realpos[i],realpos[j]
-            dr = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
-            if np.linalg.norm(dr) < (50*3e8/180e6): continue
-            for r in reds:
-                if bl in r or bl[::-1] in r:
-                    for rbl in r:
-                        try:
-                            marr = np.ma.masked_array(mdata[rbl][p],mflag[rbl][p])
-                        except(KeyError):
-                            marr = np.ma.masked_array(mdata[rbl[::-1]][p],mflag[rbl[::-1]][p])
-                        if tave:
-                            marr = np.mean(marr,axis=0)
-                            marr = marr.reshape(1,-1)
-                        s1 += (np.abs(v2[p][bl])*np.abs(marr.data)*np.logical_not(marr.mask))
-                        s2 += (np.abs(marr.data)*np.abs(marr.data)*np.logical_not(marr.mask))
-        ind = np.where(s2==0)
-        s2[ind] = np.inf
-        A = s1/s2
-        amppar[p[0]] = np.sqrt(A)
+    for p in g2.keys():
+        s = 0
+        n = 0
+        SH = g2[p][g2[p].keys()[0]]
+        for a in g2[p].keys():
+            s += (np.resize(np.abs(fhd[p][a]),SH)/np.abs(g2[p][a]))
+            n += 1.
+        amppar[p] = (s/n)
     return amppar
+
 
 def phsproj(omni,fhd,realpos,EastHex,SouthHex,ref_antenna):
     phspar = {}
