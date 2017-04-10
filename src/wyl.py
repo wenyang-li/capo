@@ -452,7 +452,7 @@ def ampproj(g2,fhd):
     for p in g2.keys():
         s = 0
         n = 0
-        SH = g2[p][g2[p].keys()[0]]
+        SH = g2[p][g2[p].keys()[0]].shape
         for a in g2[p].keys():
             s += (np.resize(np.abs(fhd[p][a]),SH)/np.abs(g2[p][a]))
             n += 1.
