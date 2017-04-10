@@ -456,7 +456,7 @@ for f,filename in enumerate(args):
     for ii in range(len(info_dict)):
         print '   excluded baselines:', list_exclude_bls_g2[ii][0]
         info_dict[ii]['ex_bls'] = list_exclude_bls_g2[ii][0]
-        info_dict[ii]['amp_wgt'] = list_exclude_bls_g2[1]
+        info_dict[ii]['amp_wgt'] = list_exclude_bls_g2[ii][1]
     print "  Start Calibration:"
     par2 = Pool(2)
     npzlist = par2.map(calibration, info_dict)
