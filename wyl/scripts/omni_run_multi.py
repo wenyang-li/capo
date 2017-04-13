@@ -38,6 +38,8 @@ o.add_option('--initauto',dest='initauto',default=False,action='store_true',
              help='Toggle: use auto_corr as initial guess for gains')
 o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
+o.add_option('--cal_all', dest='cal_all', default=False, action='store_true',
+             help='copy fhd calibration to npz files for non-hex antennas')
 o.add_option('--projdegen', dest='projdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to raw fhd solutions')
 o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
@@ -141,7 +143,7 @@ if opts.calpar != None: #create g0 if txt file is provided
     else:
         raise IOError('invalid calpar file')
 
-if opts.projdegen or opts.fitdegen:
+if opts.projdegen or opts.fitdegen or opts.cal_all:
     fhd_cal = readsav(opts.fhdpath+'calibration/'+args[0]+'_cal.sav',python_dict=True)
     gfhd = {'x':{},'y':{}}
     if opts.fitdegen:
@@ -182,10 +184,10 @@ for filename in args:
 
 exec('from %s import *'% opts.cal) # Including antpos, realpos, EastHex, SouthHex
 
-if opts.instru == 'mwa':
-    print "   Loading model"
-    model_files = glob.glob(opts.fhdpath+'vis_data/'+args[0]+'*') + glob.glob(opts.fhdpath+'metadata/'+args[0]+'*')
-    model_dict = capo.wyl.uv_read_omni([model_files],filetype='fhd', antstr='cross', p_list=pols, use_model=True)
+#if opts.instru == 'mwa':
+#    print "   Loading model"
+#    model_files = glob.glob(opts.fhdpath+'vis_data/'+args[0]+'*') + glob.glob(opts.fhdpath+'metadata/'+args[0]+'*')
+#    model_dict = capo.wyl.uv_read_omni([model_files],filetype='fhd', antstr='cross', p_list=pols, use_model=True)
 #################################################################################################
 
 def diagnostic(infodict):
@@ -221,8 +223,8 @@ def diagnostic(infodict):
             g0_temp = g0[p[0]][key]
             g0[p[0]][key] = np.resize(g0_temp,(1,ginfo[2]))
             if opts.initauto: g0[p[0]][key] *= auto[key]
-    m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen)
-    m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
+    m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=False)
+    m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=False)
     for r in reds:
         if len(r) < min_size_bl_gp: continue
         stack_data = []
@@ -374,28 +376,40 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         if opts.tave:
             g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[2]))
         else:
-            g_temp = np.ma.masked_array(g2[p[0]][a],mask_arr,fill_value=1.0)
-            chi_key = 'chisq'+str(a)+p[0]
-            zero_ind = np.where(m2[chi_key] == 0)
-            m2[chi_key][zero_ind] = np.inf
-            chisq = (1./m2[chi_key])*np.logical_not(mask_arr)
-            chi_norm = np.sum(chisq,axis=0)
-            nonzero = np.where(chi_norm>0)
-            chisq[:,nonzero[0]] /= chi_norm[nonzero]
-            g_temp *= chisq
-            g_temp = np.sum(g_temp,axis=0)
+            chi = m2['chisq']
+            chi_mask = np.zeros(chi.shape,dtype=bool)
+            ind = np.where((chi/np.mean(chi))>1.2)
+            chi_mask[ind] = True
+            or_mask = np.logical_or(chi_mask,mask_arr)
+            g_temp = np.ma.masked_array(g2[p[0]][a],or_mask,fill_value=0.0)
+#            chi_key = 'chisq'+str(a)+p[0]
+#            zero_ind = np.where(m2[chi_key] == 0)
+#            m2[chi_key][zero_ind] = np.inf
+#            chisq = (1./m2[chi_key])*np.logical_not(mask_arr)
+#            chi_norm = np.sum(chisq,axis=0)
+#            nonzero = np.where(chi_norm>0)
+#            chisq[:,nonzero[0]] /= chi_norm[nonzero]
+#            g_temp *= chisq
+            g_temp = np.mean(g_temp,axis=0)
             g2[p[0]][a] = g_temp.data
+            if opts.instru == 'mwa':
+                for ii in range(384):
+                    if ii%16 == 8:
+                        g2[p[0]][a][ii] = (g2[p[0]][a][ii+1]+g2[p[0]][a][ii-1])/2
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
     m2['lsts'] = t_lst
     m2['freqs'] = freqs
     m2['ex_bls'] = infodict['ex_bls']
-    if opts.instru == 'mwa':
-        print '   start non-hex tiles calibration using fhd model'
-        g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
-        for a in g3[p[0]].keys():
-            if not g2[p[0]].has_key(a): g2[p[0]][a] = g3[p[0]][a]
+    if opts.cal_all:
+        print '   copying non-hex cal solution from FHD run'
+#        g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
+#        for a in g3[p[0]].keys():
+#            if not g2[p[0]].has_key(a): g2[p[0]][a] = g3[p[0]][a]
+        for a in range(fhd_cal['cal']['N_TILE'][0]):
+            if a in g2[p[0]].keys() or a in ex_ants: continue
+            g2[p[0]][a] = gfhd[p[0]][a]
     if opts.ftype == 'miriad':
         npzname = opts.omnipath+'.'.join(filename.split('/')[-1].split('.')[0:4])+'.npz'
     else:
