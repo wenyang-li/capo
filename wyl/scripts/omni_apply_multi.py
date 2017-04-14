@@ -110,7 +110,7 @@ for f,filename in enumerate(args):
                 day = int(filename)/86400
                 hdu = fits.open(opts.metafits+filename+'.metafits')
                 pointing = delays[hdu[0].header['DELAYS']]
-                omnifile_ave = opts.npz + '_' str(day) + '_' + str(pointing) + '.' + p + '.npz'
+                omnifile_ave = opts.npz + '_' + str(day) + '_' + str(pointing) + '.' + p + '.npz'
             else: omnifile_ave = opts.npz + '.' + p + '.npz'
         omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
         print '  Reading and applying:', omnifile, omnifile_ave
