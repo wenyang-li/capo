@@ -1,7 +1,15 @@
 import numpy as np
-import sys, glob
+import sys, glob, optparse
 import capo.omni as omni
 from astropy.io import fits
+
+o = optparse.OptionParser()
+o.set_usage('pointing_day_average.py [options]')
+o.set_description(__doc__)
+o.add_option('--metafits', dest='metafits', default='/users/wl42/data/wl42/Nov2016EoR0/', type='string',
+             help='path to metafits files, look for pointings')
+opts,args = o.parse_args(sys.argv[1:])
+
 delays = {
 '0,5,10,15,1,6,11,16,2,7,12,17,3,8,13,18':-5,
 '0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15':-4,
@@ -16,6 +24,7 @@ delays = {
 '15,10,5,0,16,11,6,1,17,12,7,2,18,13,8,3':5,
 }
 
+opts,args = o.parse_args(sys.argv[1:])
 #p = sys.argv[1]
 pols = ['xx','yy']
 for p in pols:
@@ -23,8 +32,9 @@ for p in pols:
     g = {}
     nfiles = {}
     for f in fn:
-        meta, gains, vismdl, xtalk = omni.from_npz(f)
         obs = f.split('/')[-1].split('.')[0]
+        if not obs[0].isdigit(): continue
+        meta, gains, vismdl, xtalk = omni.from_npz(f)
         metafits = '../'+obs+'.metafits'
         hdu = fits.open(metafits)
         day = int(obs)/86400

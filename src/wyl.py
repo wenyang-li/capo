@@ -454,6 +454,7 @@ def ampproj(g2,fhd):
         n = 0
         SH = g2[p][g2[p].keys()[0]].shape
         for a in g2[p].keys():
+            if np.isnan(np.mean(fhd[p][a])): continue
             s += (np.resize(np.abs(fhd[p][a]),SH)/np.abs(g2[p][a]))
             n += 1.
         amppar[p] = (s/n)
