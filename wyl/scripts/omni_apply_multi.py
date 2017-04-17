@@ -14,6 +14,8 @@ o.set_description(__doc__)
 aipy.scripting.add_standard_options(o,pol=True,cal=True)
 o.add_option('--xtalk',dest='xtalk',default=False,action='store_true',
             help='Toggle: apply xtalk solutions to data. Default=False')
+o.add_option('--rmfc',dest='rmfc',default=False,action='store_true',
+             help='Toggle: remove firstcal. Default=False')
 o.add_option('--bpfit',dest='bpfit',default=False,action='store_true',
              help='Toggle: do a global bp fit to sols. Default=False')
 o.add_option('--polyfit',dest='polyfit',default=False,action='store_true',
@@ -147,6 +149,13 @@ for f,filename in enumerate(args):
             for ii in range(384):
                 if ii%16 in [0,15]: fqs[ii] = 0
                 else: fuse.append(ii)
+        if opts.rmfc:
+            print '   removing firstcal'
+            fc = np.load(opts.omnipath % (filename.split('/')[-1]+'.'+p+'.fc'))
+            for k in fc.keys():
+                if k[0].isdigit():
+                    a = int(k[:-1])
+                    gains[p[0]][a] /= fc[k][0]
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
             a2 = uvi.ant_2_array[ii]

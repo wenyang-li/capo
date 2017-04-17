@@ -30,7 +30,6 @@ pols = ['xx','yy']
 for p in pols:
     fn=glob.glob('./*'+p+'.npz')
     g = {}
-    nfiles = {}
     for f in fn:
         obs = f.split('/')[-1].split('.')[0]
         if not obs[0].isdigit(): continue
@@ -40,15 +39,14 @@ for p in pols:
         day = int(obs)/86400
         suffix = str(day)+'_'+str(delays[hdu[0].header['DELAYS']])
         if not g.has_key(suffix): g[suffix]={p[0]:{}}
-        if not nfiles.has_key(suffix): nfiles[suffix]=0
-        nfiles[suffix]+=1
         for a in gains[p[0]].keys():
-            if not g[suffix][p[0]].has_key(a): g[suffix][p[0]][a] = gains[p[0]][a]
-            else: g[suffix][p[0]][a] += gains[p[0]][a]
-    print nfiles
+            if not g[suffix][p[0]].has_key(a): g[suffix][p[0]][a] = []
+            if np.isnan(np.mean(gains[p[0]][a])): continue
+            g[suffix][p[0]][a].append(gains[p[0]][a])
     for suf in g.keys():
         for a in g[suf][p[0]].keys():
-            g[suf][p[0]][a] /= nfiles[suf] 
+            g[suf][p[0]][a] = np.array(g[suf][p[0]][a])
+            g[suf][p[0]][a] = np.mean(g[suf][p[0]][a],axis=0)
         outfn = 'omniave_'+str(suf)+'.'+p+'.npz'
         omni.to_npz(outfn, meta, g[suf], vismdl, xtalk)
 
