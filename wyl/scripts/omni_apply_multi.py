@@ -114,7 +114,8 @@ for f,filename in enumerate(args):
                 pointing = delays[hdu[0].header['DELAYS']]
                 omnifile_ave = opts.npz + '_' + str(day) + '_' + str(pointing) + '.' + p + '.npz'
             else: omnifile_ave = opts.npz + '.' + p + '.npz'
-        omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
+        if opts.rmfc: omnifile = opts.omnipath % (filename.split('/')[-1]+'_fc.'+p)
+        else: omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
         print '  Reading and applying:', omnifile, omnifile_ave
         if not opts.npz == None:
             _,gains,_,_ = capo.omni.from_npz(omnifile_ave)
@@ -149,13 +150,6 @@ for f,filename in enumerate(args):
             for ii in range(384):
                 if ii%16 in [0,15]: fqs[ii] = 0
                 else: fuse.append(ii)
-        if opts.rmfc:
-            print '   removing firstcal'
-            fc = np.load(opts.omnipath % (filename.split('/')[-1]+'.'+p+'.fc'))
-            for k in fc.keys():
-                if k[0].isdigit():
-                    a = int(k[:-1])
-                    gains[p[0]][a] /= fc[k][0]
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
             a2 = uvi.ant_2_array[ii]

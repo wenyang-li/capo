@@ -44,8 +44,10 @@ o.add_option('--projdegen', dest='projdegen', default=False, action='store_true'
              help='Toggle: project degeneracy to raw fhd solutions')
 o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to fitted fhd solutions')
+o.add_option('--wgt_cal', dest='wgt_cal', default=False, action='store_true',
+             help='Toggle: weight each gain by its amplitude before cal')
 o.add_option('--divauto', dest='divauto', default=False, action='store_true',
-             help='Toggle: use auto corr to weight visibilities before cal')
+             help='Toggle: use auto corr to weight visibilities before cal, need wgt_cal on')
 o.add_option('--smooth', dest='smooth', default=False, action='store_true',
              help='Toggle: smooth data before cal by removing any signal beyond horizon, need divauto on')
 o.add_option('--fhdpath', dest='fhdpath', default='/users/wl42/data/wl42/FHD_out/fhd_PhaseII_Longrun_EoR0/', type='string',
@@ -307,23 +309,24 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             m = np.mean(m,axis=0)
             data[bl] = {p: np.complex64(m.data.reshape(1,-1))}
         else: data[bl] = {p: copy.copy(d[bl][p])}
-    # if weight antennas by auto corr:
-    if opts.divauto:
-        for bl in data.keys():
-            i,j = bl
-            data[bl][p] /= (auto[i]*auto[j])
-            if opts.smooth:
-                tfq = np.fft.fftfreq(freqs.size,(freqs[1]-freqs[0]))
-                fftdata = np.fft.fft(data[bl][p],axis=1)
-                ri,rj = realpos[i],realpos[j]
-                rij = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
-                inds = np.where(np.abs(tfq)>(np.linalg.norm(rij)/3e8+50e-9))
-                fftdata[:,inds]=0
-                data[bl][p] = np.complex64(np.fft.ifft(fftdata,axis=1))
-    else:
-        for bl in data.keys():
-            i,j = bl
-            data[bl][p] /= (np.abs(amp_wgt[i][0])*np.abs(amp_wgt[j][0]))
+    if opts.wgt_cal:
+        # if weight antennas by auto corr:
+        if opts.divauto:
+            for bl in data.keys():
+                i,j = bl
+                data[bl][p] /= (auto[i]*auto[j])
+                if opts.smooth:
+                    tfq = np.fft.fftfreq(freqs.size,(freqs[1]-freqs[0]))
+                    fftdata = np.fft.fft(data[bl][p],axis=1)
+                    ri,rj = realpos[i],realpos[j]
+                    rij = np.array([ri['top_x']-rj['top_x'],ri['top_y']-rj['top_y'],ri['top_z']-rj['top_z']])
+                    inds = np.where(np.abs(tfq)>(np.linalg.norm(rij)/3e8+50e-9))
+                    fftdata[:,inds]=0
+                    data[bl][p] = np.complex64(np.fft.ifft(fftdata,axis=1))
+        else:
+            for bl in data.keys():
+                i,j = bl
+                data[bl][p] /= (np.abs(amp_wgt[i][0])*np.abs(amp_wgt[j][0]))
      #indexed by bl and then pol (backwards from everything else)
 
     wgts[p] = {} #weights dictionary by pol
@@ -334,12 +337,13 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen) #SAK CHANGE REMOVEDEGEN
     print '   Lincal-ing'
     m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
-    if opts.divauto:
-        for a in g2[p[0]].keys():
-            g2[p[0]][a] *= auto[a]
-    else:
-        for a in g2[p[0]].keys():
-            g2[p[0]][a] *= np.abs(amp_wgt[a][0])
+    if opts.wgt_cal:
+        if opts.divauto:
+            for a in g2[p[0]].keys():
+                g2[p[0]][a] *= auto[a]
+        else:
+            for a in g2[p[0]].keys():
+                g2[p[0]][a] *= np.abs(amp_wgt[a][0])
     xtalk = capo.omni.compute_xtalk(m2['res'], wgts) #xtalk is time-average of residual
 
     ############# To project out degeneracy parameters ####################
