@@ -376,6 +376,20 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for bl in v2[p].keys():
             i,j = bl
             v2[p][bl] /= (degen_proj[j].conj()*degen_proj[i])
+    #compute chi-square
+    if not opts.tave:
+        print '   compute chi-square'
+        chisq = 0
+        for r in reds():
+            for bl in r:
+                if v2[p].has_key(bl): yij = v2[p][bl]
+            for bl in r:
+                try: md = np.ma.masked_array(d[bl][p],mask=f[bl][p])
+                except(KeyError): md = np.ma.masked_array(d[bl[::-1]][p].conj(),mask=f[bl[::-1]][p],fill_value=0.0)
+                i,j = bl
+                chisq += (np.abs(md.data-g[p[0]][i]*g[p[0]][j].conj()*yij))**2/(np.var(md,axis=0).data+1e-7)
+        DOF = (info.nBaseline - info.nAntenna - info.ublcount.size)
+        m2['chisq'] = chisq / float(DOF)
     for a in g2[p[0]].keys():
         if opts.tave:
             g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[2]))
