@@ -380,7 +380,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     if not opts.tave:
         print '   compute chi-square'
         chisq = 0
-        for r in reds():
+        for r in reds:
             for bl in r:
                 if v2[p].has_key(bl): yij = v2[p][bl]
             for bl in r:
