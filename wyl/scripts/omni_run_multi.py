@@ -396,24 +396,12 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         else:
             chi = m2['chisq']
             chi_mask = np.zeros(chi.shape,dtype=bool)
-            ind = np.where((chi/np.mean(chi))>1.2)
+            ind = np.where(chi>1.2)
             chi_mask[ind] = True
             or_mask = np.logical_or(chi_mask,mask_arr)
             g_temp = np.ma.masked_array(g2[p[0]][a],or_mask,fill_value=0.0)
-#            chi_key = 'chisq'+str(a)+p[0]
-#            zero_ind = np.where(m2[chi_key] == 0)
-#            m2[chi_key][zero_ind] = np.inf
-#            chisq = (1./m2[chi_key])*np.logical_not(mask_arr)
-#            chi_norm = np.sum(chisq,axis=0)
-#            nonzero = np.where(chi_norm>0)
-#            chisq[:,nonzero[0]] /= chi_norm[nonzero]
-#            g_temp *= chisq
             g_temp = np.mean(g_temp,axis=0)
             g2[p[0]][a] = g_temp.data
-            if opts.instru == 'mwa':
-                for ii in range(384):
-                    if ii%16 == 8:
-                        g2[p[0]][a][ii] = (g2[p[0]][a][ii+1]+g2[p[0]][a][ii-1])/2
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
