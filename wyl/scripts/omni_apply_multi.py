@@ -14,8 +14,6 @@ o.set_description(__doc__)
 aipy.scripting.add_standard_options(o,pol=True,cal=True)
 o.add_option('--xtalk',dest='xtalk',default=False,action='store_true',
             help='Toggle: apply xtalk solutions to data. Default=False')
-o.add_option('--rmfc',dest='rmfc',default=False,action='store_true',
-             help='Toggle: remove firstcal. Default=False')
 o.add_option('--bpfit',dest='bpfit',default=False,action='store_true',
              help='Toggle: do a global bp fit to sols. Default=False')
 o.add_option('--polyfit',dest='polyfit',default=False,action='store_true',
@@ -114,8 +112,7 @@ for f,filename in enumerate(args):
                 pointing = delays[hdu[0].header['DELAYS']]
                 omnifile_ave = opts.npz + '_' + str(day) + '_' + str(pointing) + '.' + p + '.npz'
             else: omnifile_ave = opts.npz + '.' + p + '.npz'
-        if opts.rmfc: omnifile = opts.omnipath % (filename.split('/')[-1]+'_fc.'+p)
-        else: omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
+        omnifile = opts.omnipath % (filename.split('/')[-1]+'.'+p)
         print '  Reading and applying:', omnifile, omnifile_ave
         if not opts.npz == None:
             _,gains,_,_ = capo.omni.from_npz(omnifile_ave)
@@ -143,13 +140,6 @@ for f,filename in enumerate(args):
             print '   polyfitting'
             gains = capo.wyl.poly_bandpass_fit(gains,instru=opts.instru)
 #*********************************************************************************************
-        fqs = np.ones((freqs.size))
-        fuse = np.arange(freqs.size)
-        if opts.instru == 'mwa':
-            fuse = []
-            for ii in range(384):
-                if ii%16 in [0,15]: fqs[ii] = 0
-                else: fuse.append(ii)
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]
             a2 = uvi.ant_2_array[ii]
@@ -164,12 +154,18 @@ for f,filename in enumerate(args):
                     try: uvi.data_array[:,0][:,:,pid][ii] -= xtalk[p][(a2,a1)].conj()
                     except(KeyError): pass
             try:
+                fuse = np.where(gains[p1][a1]!=0)
+                fnot = np.where(gains[p1][a1]==0)
                 uvi.data_array[:,0][:,:,pid][ii][fuse] /= gains[p1][a1][fuse]
-                uvi.data_array[:,0][:,:,pid][ii] *= fqs
+                uvi.data_array[:,0][:,:,pid][ii][fnot] *= 0
+                uvi.flag_array[:,0][:,:,pid][ii][fnot] = True
             except(KeyError): pass
             try:
+                fuse = np.where(gains[p2][a2]!=0)
+                fnot = np.where(gains[p2][a2]==0)
                 uvi.data_array[:,0][:,:,pid][ii][fuse] /= gains[p2][a2][fuse].conj()
-                uvi.data_array[:,0][:,:,pid][ii] *= fqs
+                uvi.data_array[:,0][:,:,pid][ii][fnot] *= 0
+                uvi.flag_array[:,0][:,:,pid][ii][fnot] = True
             except(KeyError): pass
 
     #write file
