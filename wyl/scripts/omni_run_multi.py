@@ -375,7 +375,11 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
                     degen_proj[a][:,ff] = np.inf    #clean nans
         for bl in v2[p].keys():
             i,j = bl
-            v2[p][bl] /= (degen_proj[j].conj()*degen_proj[i])
+            degenij = (degen_proj[j].conj()*degen_proj[i])
+            fuse = np.where(degenij!=0)
+            fnot = np.where(degenij==0)
+            v2[p][bl][fuse] /= degenij[fuse]
+            v2[p][bl][fnot] *= 0
     #compute chi-square
     if not opts.tave:
         print '   compute chi-square'
