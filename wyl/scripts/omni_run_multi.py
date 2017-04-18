@@ -368,11 +368,6 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             else: proj *= phspar[p[0]]['offset_south']
             degen_proj[a] = proj
             g2[p[0]][a] *= proj
-        for a in g2[p[0]].keys():
-            for ff in range(384):
-                if ff%16 in [0,15]:
-                    g2[p[0]][a][:,ff] = 0
-                    degen_proj[a][:,ff] = np.inf    #clean nans
         for bl in v2[p].keys():
             i,j = bl
             degenij = (degen_proj[j].conj()*degen_proj[i])
