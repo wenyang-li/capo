@@ -402,6 +402,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             g_temp = np.ma.masked_array(g2[p[0]][a],or_mask,fill_value=0.0)
             g_temp = np.mean(g_temp,axis=0)
             g2[p[0]][a] = g_temp.data
+            if opts.instru == 'mwa':
+                for ii in range(384):
+                        if ii%16 == 8: g2[p[0]][a][ii] = (g2[p[0]][a][ii+1]+g2[p[0]][a][ii-1])/2
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
