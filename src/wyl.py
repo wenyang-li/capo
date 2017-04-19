@@ -366,7 +366,7 @@ def polyfunc(x,z):
     return sum
 
 
-def mwa_bandpass_fit(gains, auto, tile_info, amp_order=9, phs_order=1):
+def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
     fqs = np.linspace(167.075,197.715,384)
     freq = np.arange(384)
     fuse = []
@@ -375,10 +375,14 @@ def mwa_bandpass_fit(gains, auto, tile_info, amp_order=9, phs_order=1):
     for p in gains.keys():
         for ant in gains[p].keys():
             x = np.array(fuse)
-            y1 = np.abs(gains[p][ant][fuse]/auto[ant][fuse])
+            A = np.zeros((384),dtype=np.float)
+            for n in range(0,24):
+                chunk = np.arange(16*n,16*n+16)
+                induse = np.where(gains[p][ant][chunk]!=0)
+                z1 = np.polyfit(freq[chunk][induse],gains[p][ant][chunk][induse]/auto[ant][chunk][induse],amp_order)
+                A[chunk][induse] = auto[ant][chunk][induse]*polyfunc(freq[chunk][induse],z1)
             y2 = np.angle(gains[p][ant][fuse])
             y2 = np.unwrap(y2)
-            z1 = np.polyfit(x,y1,amp_order)
             z2 = np.polyfit(x,y2,phs_order)
             rp = np.ones((384),dtype=np.complex)
             cable = tile_info[ant]['cable']
@@ -395,7 +399,7 @@ def mwa_bandpass_fit(gains, auto, tile_info, amp_order=9, phs_order=1):
                 mask[0] = 1.
                 fftrp *= mask
                 rp = np.fft.ifft(fftrp)
-            gains[p][ant] = auto[ant]*polyfunc(freq,z1)*np.exp(1j*polyfunc(freq,z2))*rp
+            gains[p][ant] = A*np.exp(1j*polyfunc(freq,z2))*rp
     return gains
 
 
