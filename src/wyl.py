@@ -379,7 +379,7 @@ def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
             for n in range(0,24):
                 chunk = np.arange(16*n,16*n+16)
                 induse = np.where(gains[p][ant][chunk]!=0)
-                z1 = np.polyfit(freq[chunk][induse],gains[p][ant][chunk][induse]/auto[ant][chunk][induse],amp_order)
+                z1 = np.polyfit(freq[chunk][induse],np.abs(gains[p][ant][chunk][induse])/auto[ant][chunk][induse],amp_order)
                 A[chunk][induse] = auto[ant][chunk][induse]*polyfunc(freq[chunk][induse],z1)
             y2 = np.angle(gains[p][ant][fuse])
             y2 = np.unwrap(y2)
