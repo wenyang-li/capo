@@ -372,6 +372,7 @@ def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
     for p in gains.keys():
         for ant in gains[p].keys():
             x = np.where(gains[p][ant]!=0)[0]
+            if x.size == 0: continue
             A = np.zeros((384),dtype=np.float)
             for n in range(0,24):
                 chunk = np.arange(16*n,16*n+16)
