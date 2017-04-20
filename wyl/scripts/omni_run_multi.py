@@ -415,7 +415,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
         for a in g3[p[0]].keys():
             if not g2[p[0]].has_key(a): g2[p[0]][a] = g3[p[0]][a]
-    else if opts.cal_all == 'copy':
+    elif opts.cal_all == 'copy':
         print '   copying non-hex cal solution from FHD run'
         for a in range(fhd_cal['cal']['N_TILE'][0]):
             if a in g2[p[0]].keys() or a in ex_ants: continue
