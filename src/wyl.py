@@ -587,9 +587,6 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
     return proj
 
 def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[],maxiter=50):
-    fqflag = []
-    for ii in range(384):
-        if ii%16 in [0,15]: fqflag.append(ii)
     h = {}
     gt = {}
     g3 = {}
@@ -624,6 +621,7 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[],maxiter=50):
             h[p][a1] = {}
             h[p][a1]['num'] = nur + 1.j*nui
             h[p][a1]['den'] = den
+            fqflag = np.where(den==0)
             den[fqflag] = 1e-7
             gt[p][a1] = nur/den + 1.j*nui/den
         for iter in range(maxiter):
@@ -650,6 +648,7 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[],maxiter=50):
                     nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)*dw,axis=0)
                     nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)*dw,axis=0)
                     den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dw,axis=0)
+                fqflag = np.where(den==0)
                 den[fqflag] = 1e-7
                 g3[p][a1] = nur/den + 1.j*nui/den
                 conv += np.nanmean(np.abs(g3[p][a1]-gt[p][a1]))

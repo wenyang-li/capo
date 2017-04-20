@@ -38,8 +38,8 @@ o.add_option('--initauto',dest='initauto',default=False,action='store_true',
              help='Toggle: use auto_corr as initial guess for gains')
 o.add_option('--instru', dest='instru', default='mwa', type='string',
              help='instrument type. Default=mwa')
-o.add_option('--cal_all', dest='cal_all', default=False, action='store_true',
-             help='copy fhd calibration to npz files for non-hex antennas')
+o.add_option('--cal_all', dest='cal_all', default='', type='string',
+             help='options: model(use sky model to cal) ,copy(directly copy from FHD), or empty')
 o.add_option('--projdegen', dest='projdegen', default=False, action='store_true',
              help='Toggle: project degeneracy to raw fhd solutions')
 o.add_option('--fitdegen', dest='fitdegen', default=False, action='store_true',
@@ -145,7 +145,7 @@ if opts.calpar != None: #create g0 if txt file is provided
     else:
         raise IOError('invalid calpar file')
 
-if opts.projdegen or opts.fitdegen or opts.cal_all:
+if opts.projdegen or opts.fitdegen or opts.cal_all == 'model' or opts.cal_all == 'copy':
     fhd_cal = readsav(opts.fhdpath+'calibration/'+args[0]+'_cal.sav',python_dict=True)
     gfhd = {'x':{},'y':{}}
     if opts.fitdegen:
@@ -186,10 +186,10 @@ for filename in args:
 
 exec('from %s import *'% opts.cal) # Including antpos, realpos, EastHex, SouthHex
 
-#if opts.instru == 'mwa':
-#    print "   Loading model"
-#    model_files = glob.glob(opts.fhdpath+'vis_data/'+args[0]+'*') + glob.glob(opts.fhdpath+'metadata/'+args[0]+'*')
-#    model_dict = capo.wyl.uv_read_omni([model_files],filetype='fhd', antstr='cross', p_list=pols, use_model=True)
+if opts.cal_all == 'model':
+    print "   Loading model"
+    model_files = glob.glob(opts.fhdpath+'vis_data/'+args[0]+'*') + glob.glob(opts.fhdpath+'metadata/'+args[0]+'*')
+    model_dict = capo.wyl.uv_read_omni([model_files],filetype='fhd', antstr='cross', p_list=pols, use_model=True)
 #################################################################################################
 
 def diagnostic(infodict):
@@ -386,7 +386,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
                 try: md = np.ma.masked_array(d[bl][p],mask=f[bl][p])
                 except(KeyError): md = np.ma.masked_array(d[bl[::-1]][p].conj(),mask=f[bl[::-1]][p],fill_value=0.0)
                 i,j = bl
-                chisq += (np.abs(md.data-g2[p[0]][i]*g2[p[0]][j].conj()*yij))**2/(np.var(md,axis=0).data+1e-7)
+                chisq += (np.abs(md.data-g2[p[0]][i]*g2[p[0]][j].conj()*yij))**2/(np.var(md,axis=0).data+1e-7)*np.logical_not(md.mask)
         DOF = (info.nBaseline - info.nAntenna - info.ublcount.size)
         m2['chisq'] = chisq / float(DOF)
     for a in g2[p[0]].keys():
@@ -403,21 +403,24 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             g2[p[0]][a] = g_temp.data
             if opts.instru == 'mwa':
                 for ii in range(384):
-                        if ii%16 == 8: g2[p[0]][a][ii] = (g2[p[0]][a][ii+1]+g2[p[0]][a][ii-1])/2
+                    if ii%16 == 8: g2[p[0]][a][ii] = (g2[p[0]][a][ii+1]+g2[p[0]][a][ii-1])/2
     ###########################################################################################
     m2['history'] = 'OMNI_RUN: '+''.join(sys.argv) + '\n'
     m2['jds'] = t_jd
     m2['lsts'] = t_lst
     m2['freqs'] = freqs
     m2['ex_bls'] = infodict['ex_bls']
-    if opts.cal_all:
+    if opts.cal_all == 'model':
+        print '   start non-hex cal'
+        g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
+        for a in g3[p[0]].keys():
+            if not g2[p[0]].has_key(a): g2[p[0]][a] = g3[p[0]][a]
+    else if opts.cal_all == 'copy':
         print '   copying non-hex cal solution from FHD run'
-#        g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
-#        for a in g3[p[0]].keys():
-#            if not g2[p[0]].has_key(a): g2[p[0]][a] = g3[p[0]][a]
         for a in range(fhd_cal['cal']['N_TILE'][0]):
             if a in g2[p[0]].keys() or a in ex_ants: continue
-            g2[p[0]][a] = gfhd[p[0]][a]
+            if np.isnan(np.mean(g2[p[0]][a])): g2[p[0]][a] = np.zeros(gfhd[p[0]][a].shape,dtype=np.complex)
+            else: g2[p[0]][a] = gfhd[p[0]][a]
     if opts.ftype == 'miriad':
         npzname = opts.omnipath+'.'.join(filename.split('/')[-1].split('.')[0:4])+'.npz'
     else:
