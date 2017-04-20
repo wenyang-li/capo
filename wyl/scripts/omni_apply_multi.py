@@ -138,7 +138,7 @@ for f,filename in enumerate(args):
             gains = capo.wyl.mwa_bandpass_fit(gains,auto,tile_info)
         if opts.polyfit:
             print '   polyfitting'
-            gains = capo.wyl.poly_bandpass_fit(gains,instru=opts.instru)
+            gains = capo.wyl.poly_bandpass_fit(gains)
 #*********************************************************************************************
         for ii in range(0,Nblts):
             a1 = uvi.ant_1_array[ii]

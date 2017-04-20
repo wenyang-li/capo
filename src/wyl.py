@@ -369,25 +369,22 @@ def polyfunc(x,z):
 def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
     fqs = np.linspace(167.075,197.715,384)
     freq = np.arange(384)
-    fuse = []
-    for ii in range(384):
-        if not ii%16 in [0,15]: fuse.append(ii)
     for p in gains.keys():
         for ant in gains[p].keys():
-            x = np.array(fuse)
+            x = np.where(gains[p][ant]!=0)[0]
             A = np.zeros((384),dtype=np.float)
             for n in range(0,24):
                 chunk = np.arange(16*n,16*n+16)
                 induse = np.where(gains[p][ant][chunk]!=0)
                 z1 = np.polyfit(freq[chunk[induse]],np.abs(gains[p][ant][chunk[induse]])/auto[ant][chunk[induse]],amp_order)
                 A[chunk[induse]] = auto[ant][chunk][induse]*polyfunc(freq[chunk][induse],z1)
-            y2 = np.angle(gains[p][ant][fuse])
+            y2 = np.angle(gains[p][ant][x])
             y2 = np.unwrap(y2)
             z2 = np.polyfit(x,y2,phs_order)
             rp = np.ones((384),dtype=np.complex)
             cable = tile_info[ant]['cable']
             if cable == 150:
-                rp[fuse] = np.exp(1j*(y2-z2[0]*x-z2[1]))
+                rp[x] = np.exp(1j*(y2-z2[0]*x-z2[1]))
                 cable = tile_info[ant]['cable']
                 tau = np.fft.fftfreq(384,(fqs[-1]-fqs[0])/384)
                 fftrp = np.fft.fft(rp,n=384)
@@ -403,18 +400,14 @@ def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
     return gains
 
 
-def poly_bandpass_fit(gains,amp_order=9, phs_order=1,instru='mwa'):
+def poly_bandpass_fit(gains,amp_order=9, phs_order=1):
     for p in gains.keys():
         for a in gains[p].keys():
             SH = gains[p][a].shape
             g = copy.copy(gains[p][a])
 #            g = np.mean(gains[p][a],axis=0)
             fqs = np.arange(g.size)
-            fuse = []
-            for ff in range(g.size):
-                if instru=='mwa' and ff%16 in [0,15]: continue
-                fuse.append(ff)
-            fuse = np.array(fuse)
+            fuse = np.where(g!=0)[0]
             z1 = np.polyfit(fuse,np.abs(g)[fuse],amp_order)
             z2 = np.polyfit(fuse,np.unwrap(np.angle(g)[fuse]),phs_order)
             gains[p][a] = polyfunc(fqs,z1)*np.exp(1j*polyfunc(fqs,z2))
