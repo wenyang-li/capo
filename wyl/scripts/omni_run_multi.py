@@ -417,9 +417,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             if not g2[p[0]].has_key(a): g2[p[0]][a] = g3[p[0]][a]
     elif opts.cal_all == 'copy':
         print '   copying non-hex cal solution from FHD run'
-        for a in range(fhd_cal['cal']['N_TILE'][0]):
+        for a in gfhd[p[0]].keys():
             if a in g2[p[0]].keys() or a in ex_ants: continue
-            if np.isnan(np.mean(g2[p[0]][a])): g2[p[0]][a] = np.zeros(gfhd[p[0]][a].shape,dtype=np.complex)
+            if np.isnan(np.mean(gfhd[p[0]][a])): g2[p[0]][a] = np.zeros(gfhd[p[0]][a].shape,dtype=np.complex)
             else: g2[p[0]][a] = gfhd[p[0]][a]
     if opts.ftype == 'miriad':
         npzname = opts.omnipath+'.'.join(filename.split('/')[-1].split('.')[0:4])+'.npz'
