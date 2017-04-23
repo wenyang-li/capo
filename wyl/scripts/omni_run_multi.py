@@ -352,7 +352,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
         for ff in range(384):
             if not ff%16 in [0,15]: fuse.append(ff)
         print '   Projecting degeneracy'
-        ref = g2[p[0]].keys()[0] # pick a reference tile to reduce the effect of phase wrapping
+        ref = min(g2[p[0]].keys()) # pick a reference tile to reduce the effect of phase wrapping, it has to be a tile in east hex
         ref_exp = np.exp(1j*np.angle(g2[p[0]][ref][:,fuse]/gfhd[p[0]][ref][fuse]))
         for a in g2[p[0]].keys(): g2[p[0]][a][:,fuse] /= ref_exp
         print '   projecting amplitude'
@@ -364,8 +364,8 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             dx = realpos[a]['top_x']-realpos[ref]['top_x']
             dy = realpos[a]['top_y']-realpos[ref]['top_y']
             proj = amppar[p[0]]*np.exp(1j*(dx*phspar[p[0]]['phix']+dy*phspar[p[0]]['phiy']))
-            if a < 93: proj *= phspar[p[0]]['offset_east']
-            else: proj *= phspar[p[0]]['offset_south']
+#            if a < 93 and ref > 92: proj *= phspar[p[0]]['offset_east']
+            if a > 93: proj *= phspar[p[0]]['offset_south']
             degen_proj[a] = proj
             g2[p[0]][a] *= proj
         for bl in v2[p].keys():
@@ -411,10 +411,9 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     m2['freqs'] = freqs
     m2['ex_bls'] = infodict['ex_bls']
     if opts.cal_all == 'model':
-        print '   start non-hex cal'
-        g3 = capo.wyl.non_hex_cal(d,g2,model_dict[p],realpos,ex_ants=ex_ants)
-        for a in g3[p[0]].keys():
-            if not g2[p[0]].has_key(a): g2[p[0]][a] = g3[p[0]][a]
+        print '   start absolute cal'
+        ref = min(g2[p[0]].keys())
+        g2 = capo.wyl.absoulte_cal(d,g2,model_dict[p],realpos,ref,ex_ants=ex_ants)
     elif opts.cal_all == 'copy':
         print '   copying non-hex cal solution from FHD run'
         for a in gfhd[p[0]].keys():

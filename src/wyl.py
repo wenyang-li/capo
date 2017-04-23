@@ -587,12 +587,12 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
                     r[a][tt] /= factor
     return proj
 
-def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[],maxiter=50):
-    h = {}
+def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
     gt = {}
     g3 = {}
+    thred_length = 50*3e8/np.max(model_dict['freqs'])
     for p in g2.keys():
-        g3[p],gt[p],h[p] = {},{},{}
+        g3[p],gt[p] = {},{}
         a = g2[p].keys()[0]
         SH = g2[p][a].shape
         pp = p+p
@@ -605,7 +605,7 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[],maxiter=50):
                 sep = np.array([realpos[a2]['top_x']-realpos[a1]['top_x'],
                                 realpos[a2]['top_y']-realpos[a1]['top_y'],
                                 realpos[a2]['top_z']-realpos[a1]['top_z']])
-                if np.linalg.norm(sep) < 50*3e8/np.max(model_dict['freqs']): continue
+                if np.linalg.norm(sep) < thred_length: continue
                 bl = (a1,a2)
                 try: dv = data[bl][pp]
                 except(KeyError): dv = data[bl[::-1]][pp].conj()
@@ -615,28 +615,28 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[],maxiter=50):
                 except(KeyError):
                     dm = mvis[bl[::-1]][pp].conj()*(g2[p][a2].conj())
                     dw = np.logical_not(mwgt[bl[::-1]][pp])
-                nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)*dw,axis=0)
-                nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)*dw,axis=0)
-                den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dw,axis=0)
+                var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
+                nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)/var*dw,axis=0)
+                nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)/var*dw,axis=0)
+                den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
             if np.nansum(den) == 0: continue
-            h[p][a1] = {}
-            h[p][a1]['num'] = nur + 1.j*nui
-            h[p][a1]['den'] = den
             fqflag = np.where(den==0)
             den[fqflag] = 1e-7
             gt[p][a1] = nur/den + 1.j*nui/den
+        for a2 in g2[p].keys():
+            gt[p][a2] = copy.copy(g2[p][a])
         for iter in range(maxiter):
             conv = 0
+            #non-hex cal
             for a1 in gt[p].keys():
+                if a1 > 56: continue
                 nur,nui,den = 0,0,0
-                nur += h[p][a1]['num'].real
-                nui += h[p][a1]['num'].imag
-                den += h[p][a1]['den']
                 for a2 in gt[p].keys():
+                    if a2 < a1: continue
                     sep = np.array([realpos[a2]['top_x']-realpos[a1]['top_x'],
                                     realpos[a2]['top_y']-realpos[a1]['top_y'],
                                     realpos[a2]['top_z']-realpos[a1]['top_z']])
-                    if np.linalg.norm(sep) < 50*3e8/np.max(model_dict['freqs']): continue
+                    if np.linalg.norm(sep) < thred_length: continue
                     bl = (a1,a2)
                     try: dv = data[bl][pp]
                     except(KeyError): dv = data[bl[::-1]][pp].conj()
@@ -646,13 +646,104 @@ def non_hex_cal(data,g2,model_dict,realpos,ex_ants=[],maxiter=50):
                     except(KeyError):
                         dm = mvis[bl[::-1]][pp].conj()*(gt[p][a2].conj())
                         dw = np.logical_not(mwgt[bl[::-1]][pp])
-                    nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)*dw,axis=0)
-                    nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)*dw,axis=0)
-                    den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dw,axis=0)
+                    var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
+                    nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)/var*dw,axis=0)
+                    nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)/var*dw,axis=0)
+                    den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
                 fqflag = np.where(den==0)
                 den[fqflag] = 1e-7
                 g3[p][a1] = nur/den + 1.j*nui/den
-                conv += np.nanmean(np.abs(g3[p][a1]-gt[p][a1]))
+    
+            #degen parameter cal
+            etan,etad = 0,0
+            A,B,C,D,E,F,alpha,beta,gamma = 0,0,0,0,0,0,0,0,0
+                    #*************************
+                    #  [ A, B, D ] [phix]   [alpha]
+                    #  [ B, C, E ] [phiy] = [beta ]
+                    #  [ D, E, F ] [phi]    [gamma]
+                    #*************************
+            for a1 in gt[p].keys():
+                if a1 < 57:
+                    #non-hex_tile ---- hex_tile
+                    for a2 in gt[p].keys():
+                        if a2 < 57: continue
+                        sep = np.array([realpos[a2]['top_x']-realpos[a1]['top_x'],
+                                        realpos[a2]['top_y']-realpos[a1]['top_y'],
+                                        realpos[a2]['top_z']-realpos[a1]['top_z']])
+                        if np.linalg.norm(sep) < thred_length: continue
+                        bl = (a1,a2)
+                        try: dv = data[bl][pp]
+                        except(KeyError): dv = data[bl[::-1]][pp].conj()
+                        try:
+                            dm = mvis[bl][pp]*(gt[p][a1]*gt[p][a2].conj())
+                            dw = np.logical_not(mwgt[bl][pp])
+                        except(KeyError):
+                            dm = mvis[bl[::-1]][pp].conj()*(gt[p][a1]*gt[p][a2].conj())
+                            dw = np.logical_not(mwgt[bl[::-1]][pp])
+                        var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
+                        etan += np.nansum((dv.real*dm.real+dv.imag*dm.imag-dm.real*dm.real-dm.imag*dm.imag)/var*dw,axis=0)
+                        etad += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
+                        dx = (realpos[a2]['top_x']-realpos[ref_antenna]['top_x'])/100.
+                        dy = (realpos[a2]['top_y']-realpos[ref_antenna]['top_y'])/100.
+                        A += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dx*dx/var*dw,axis=0)
+                        B += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dx*dy/var*dw,axis=0)
+                        C += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dy*dy/var*dw,axis=0)
+                        alpha += np.nansum((dv.real*dm.imag-dv.imag*dm.real)*dx/var*dw,axis=0)
+                        beta += np.nansum((dv.real*dm.imag-dv.imag*dm.real)*dy/var*dw,axis=0)
+                        if a2 > 92:
+                            D += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dx/var*dw,axis=0)
+                            E += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dy/var*dw,axis=0)
+                            F += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
+                            gamma += np.nansum((dv.real*dm.imag-dv.imag*dm.real)/var*dw,axis=0)
+                else:
+                    #hex_tile ---- hex_tile
+                    for a2 in gt[p].keys():
+                        if a2 < a1: continue
+                        sep = np.array([realpos[a2]['top_x']-realpos[a1]['top_x'],
+                                        realpos[a2]['top_y']-realpos[a1]['top_y'],
+                                        realpos[a2]['top_z']-realpos[a1]['top_z']])
+                        if np.linalg.norm(sep) < thred_length: continue
+                        bl = (a1,a2)
+                        try: dv = data[bl][pp]
+                        except(KeyError): dv = data[bl[::-1]][pp].conj()
+                        try:
+                            dm = mvis[bl][pp]*(gt[p][a1]*gt[p][a2].conj())
+                            dw = np.logical_not(mwgt[bl][pp])
+                        except(KeyError):
+                            dm = mvis[bl[::-1]][pp].conj()*(gt[p][a1]*gt[p][a2].conj())
+                            dw = np.logical_not(mwgt[bl[::-1]][pp])
+                        var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
+                        etan += np.nansum(2*(dv.real*dm.real+dv.imag*dm.imag-dm.real*dm.real-dm.imag*dm.imag)/var*dw,axis=0)
+                        etad += np.nansum(4*(dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
+                        dx = (realpos[a1]['top_x']-realpos[a2]['top_x'])/100
+                        dy = (realpos[a1]['top_y']-realpos[a2]['top_y'])/100
+                        A += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dx*dx/var*dw,axis=0)
+                        B += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dx*dy/var*dw,axis=0)
+                        C += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dy*dy/var*dw,axis=0)
+                        alpha -= np.nansum((dv.real*dm.imag-dv.imag*dm.real)*dx/var*dw,axis=0)
+                        beta -= np.nansum((dv.real*dm.imag-dv.imag*dm.real)*dy/var*dw,axis=0)
+                        if a1 < 93 and a2 > 92:
+                            D -= np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dx/var*dw,axis=0)
+                            E -= np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dy/var*dw,axis=0)
+                            F += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
+                            gamma += np.nansum((dv.real*dm.imag-dv.imag*dm.real)/var*dw,axis=0)
+                DET = A*C*F + 2*B*D*E - B*B*F - A*E*E - C*D*D
+                zeros = np.where(DET == 0)
+                DET[zeros] += 1e-7
+                phix = ((C*F-E*E)*alpha + (D*E-B*F)*beta + (B*E-C*D)*gamma)/DET
+                phiy = ((D*E-B*F)*alpha + (A*F-D*D)*beta + (B*D-A*E)*gamma)/DET
+                phi = ((B*E-C*D)*alpha + (B*D-A*E)*beta + (A*C-B*B)*gamma)/DET
+                zeros = np.where(etad == 0)
+                etad[zeros] += 1e-7
+                eta = etan/etad
+                for a in g2[p].keys():
+                    dx = (realpos[a]['top_x']-realpos[ref_antenna]['top_x'])/100.
+                    dy = (realpos[a]['top_y']-realpos[ref_antenna]['top_y'])/100.
+                    if a < 93: projdegen = np.exp(eta+1j*(phix*dx+phiy*dy))
+                    else: projdegen = np.exp(eta+1j*(phix*dx+phiy*dy+phi))
+                    g3[p][a] = gt[p][a]*projdegen
+            for a in gt[p].keys():
+                conv += np.nanmean(np.abs(g3[p][a]-gt[p][a]))
             if conv < 1e-2:
                 print 'maxiter and conv for non-hex cal:',iter,conv
                 break
