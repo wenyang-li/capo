@@ -715,8 +715,8 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
                         var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
                         etan += np.nansum(2*(dv.real*dm.real+dv.imag*dm.imag-dm.real*dm.real-dm.imag*dm.imag)/var*dw,axis=0)
                         etad += np.nansum(4*(dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
-                        dx = (realpos[a1]['top_x']-realpos[a2]['top_x'])/100
-                        dy = (realpos[a1]['top_y']-realpos[a2]['top_y'])/100
+                        dx = (realpos[a1]['top_x']-realpos[a2]['top_x'])/100.
+                        dy = (realpos[a1]['top_y']-realpos[a2]['top_y'])/100.
                         A += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dx*dx/var*dw,axis=0)
                         B += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dx*dy/var*dw,axis=0)
                         C += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dy*dy/var*dw,axis=0)
@@ -727,21 +727,22 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
                             E -= np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dy/var*dw,axis=0)
                             F += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
                             gamma += np.nansum((dv.real*dm.imag-dv.imag*dm.real)/var*dw,axis=0)
-                DET = A*C*F + 2*B*D*E - B*B*F - A*E*E - C*D*D
-                zeros = np.where(DET == 0)
-                DET[zeros] += 1e-7
-                phix = ((C*F-E*E)*alpha + (D*E-B*F)*beta + (B*E-C*D)*gamma)/DET
-                phiy = ((D*E-B*F)*alpha + (A*F-D*D)*beta + (B*D-A*E)*gamma)/DET
-                phi = ((B*E-C*D)*alpha + (B*D-A*E)*beta + (A*C-B*B)*gamma)/DET
-                zeros = np.where(etad == 0)
-                etad[zeros] += 1e-7
-                eta = etan/etad
-                for a in g2[p].keys():
-                    dx = (realpos[a]['top_x']-realpos[ref_antenna]['top_x'])/100.
-                    dy = (realpos[a]['top_y']-realpos[ref_antenna]['top_y'])/100.
-                    if a < 93: projdegen = np.exp(eta+1j*(phix*dx+phiy*dy))
-                    else: projdegen = np.exp(eta+1j*(phix*dx+phiy*dy+phi))
-                    g3[p][a] = gt[p][a]*projdegen
+            DET = A*C*F + 2*B*D*E - B*B*F - A*E*E - C*D*D
+            zeros = np.where(DET == 0)
+            DET[zeros] = 1
+            phix = ((C*F-E*E)*alpha + (D*E-B*F)*beta + (B*E-C*D)*gamma)/DET
+            phiy = ((D*E-B*F)*alpha + (A*F-D*D)*beta + (B*D-A*E)*gamma)/DET
+            phi = ((B*E-C*D)*alpha + (B*D-A*E)*beta + (A*C-B*B)*gamma)/DET
+            zeros = np.where(etad == 0)
+            etad[zeros] = 1.
+            etan[zeros] = 0.
+            eta = etan/etad
+            for a in g2[p].keys():
+                dx = (realpos[a]['top_x']-realpos[ref_antenna]['top_x'])/100.
+                dy = (realpos[a]['top_y']-realpos[ref_antenna]['top_y'])/100.
+                if a < 93: projdegen = np.exp(eta+1j*(phix*dx+phiy*dy))
+                else: projdegen = np.exp(eta+1j*(phix*dx+phiy*dy+phi))
+                g3[p][a] = gt[p][a]*projdegen
             for a in gt[p].keys():
                 conv += np.nanmean(np.abs(g3[p][a]-gt[p][a]))
             if conv < 1e-2:
