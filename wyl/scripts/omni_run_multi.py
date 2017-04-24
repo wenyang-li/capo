@@ -392,6 +392,8 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     for a in g2[p[0]].keys():
         if opts.tave:
             g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[2]))
+            stack_mask = np.sum(np.logical_not(mask_arr),axis=0).astype(bool)
+            g2[p[0]][a] *= stack_mask
         else:
             chi = m2['chisq']
             chi_mask = np.zeros(chi.shape,dtype=bool)

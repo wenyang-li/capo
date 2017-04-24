@@ -375,29 +375,29 @@ def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
             if x.size == 0: continue
             A = np.zeros((384),dtype=np.float)
             for n in range(0,24):
-                chunk = np.arange(16*n,16*n+16)
+                chunk = np.arange(16*n+1,16*n+15)
                 induse = np.where(gains[p][ant][chunk]!=0)
                 z1 = np.polyfit(freq[chunk[induse]],np.abs(gains[p][ant][chunk[induse]])/auto[ant][chunk[induse]],amp_order)
-                A[chunk[induse]] = auto[ant][chunk][induse]*polyfunc(freq[chunk][induse],z1)
+                A[chunk[induse]] = auto[ant][chunk[induse]]*polyfunc(freq[chunk[induse]],z1)
             y2 = np.angle(gains[p][ant][x])
             y2 = np.unwrap(y2)
             z2 = np.polyfit(x,y2,phs_order)
-            rp = np.ones((384),dtype=np.complex)
+            rp = np.zeros((384),dtype=np.complex)
             cable = tile_info[ant]['cable']
             if cable == 150:
-                rp[x] = np.exp(1j*(y2-z2[0]*x-z2[1]))
+                t0 = 2*150./299792458.0/0.81*1e6
+                rp[x] = gains[p][ant][x]-(A[x]*np.exp(1j*(z2[0]*x+z2[1])))
                 cable = tile_info[ant]['cable']
                 tau = np.fft.fftfreq(384,(fqs[-1]-fqs[0])/384)
                 fftrp = np.fft.fft(rp,n=384)
-                inds = np.where(abs(np.abs(tau)-1)<0.3)
-                imax = np.where(np.abs(fftrp)==np.max(np.abs(fftrp[inds])))
-                ind = np.where(np.abs(tau)==np.abs(tau[imax][0]))
+                inds = np.where(abs(np.abs(tau)-t0)<0.05)
+                imax = np.argmax(np.abs(fftrp[inds]))
+                ind = np.where(np.abs(tau)==np.abs(tau[inds][imax]))
                 mask =np.zeros((384))
                 mask[ind] = 1.
-                mask[0] = 1.
                 fftrp *= mask
                 rp = np.fft.ifft(fftrp)
-            gains[p][ant] = A*np.exp(1j*polyfunc(freq,z2))*rp
+            gains[p][ant] = A*np.exp(1j*polyfunc(freq,z2))+rp
     return gains
 
 
