@@ -760,7 +760,7 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
             for a in gt[p].keys():
                 conv += np.nanmean(np.abs(g3[p][a]-gt[p][a]))
             print 'check conv: ', iter, conv
-            if conv < 1e-2:
+            if conv < 0.1:
                 print 'maxiter and conv for non-hex cal:',iter,conv
                 break
             else:

@@ -365,7 +365,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             dy = realpos[a]['top_y']-realpos[ref]['top_y']
             proj = amppar[p[0]]*np.exp(1j*(dx*phspar[p[0]]['phix']+dy*phspar[p[0]]['phiy']))
 #            if a < 93 and ref > 92: proj *= phspar[p[0]]['offset_east']
-            if a > 93: proj *= phspar[p[0]]['offset_south']
+            if a > 92: proj *= phspar[p[0]]['offset_south']
             degen_proj[a] = proj
             g2[p[0]][a] *= proj
         for bl in v2[p].keys():
