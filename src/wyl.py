@@ -397,7 +397,8 @@ def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1):
                 mask[ind] = 1.
                 fftrp *= mask
                 rp = np.fft.ifft(fftrp)
-            gains[p][ant] = A*np.exp(1j*polyfunc(freq,z2))+rp
+            gains[p][ant] = A*np.exp(1j*polyfunc(freq,z2))
+            gains[p][ant][x] += rp[x]
     return gains
 
 
