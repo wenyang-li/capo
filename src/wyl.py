@@ -587,6 +587,12 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
                     r[a][tt] /= factor
     return proj
 
+def cal_var(v,m,w):
+    dv = np.ma.masked_array(v,mask=w,fill_value=0.+0.j)
+    dm = np.ma.masked_array(m,mask=w,fill_value=0.+0.j)
+    da = -(dv-np.mean(dv,axis=0))*(dm-np.mean(dm,axis=0))
+    return np.var(dv,axis=0).data+np.var(dm,axis=0).data+2*np.mean(da,axis=0).data
+
 def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
     gt = {}
     g3 = {}
@@ -615,13 +621,14 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
                 except(KeyError):
                     dm = mvis[bl[::-1]][pp].conj()*(g2[p][a2].conj())
                     dw = np.logical_not(mwgt[bl[::-1]][pp])
-                var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
-                nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)/var*dw,axis=0)
-                nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)/var*dw,axis=0)
-                den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
+                nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)/dw,axis=0)
+                nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)/dw,axis=0)
+                den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/dw,axis=0)
             if np.nansum(den) == 0: continue
-            fqflag = np.where(den==0)
-            den[fqflag] = 1e-7
+            zeros = np.where(den==0)
+            den[zeros] = 1.
+            nur[zeros] = 0.
+            nui[zeros] = 0.
             gt[p][a1] = nur/den + 1.j*nui/den
         for a2 in g2[p].keys():
             gt[p][a2] = copy.copy(g2[p][a])
@@ -641,18 +648,20 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
                     try: dv = data[bl][pp]
                     except(KeyError): dv = data[bl[::-1]][pp].conj()
                     try:
-                        dm = mvis[bl][pp]*(gt[p][a2].conj())
+                        dm = mvis[bl][pp]*(gt[p][a1]*gt[p][a2].conj())
                         dw = np.logical_not(mwgt[bl][pp])
                     except(KeyError):
-                        dm = mvis[bl[::-1]][pp].conj()*(gt[p][a2].conj())
+                        dm = mvis[bl[::-1]][pp].conj()*(gt[p][a1]*gt[p][a2].conj())
                         dw = np.logical_not(mwgt[bl[::-1]][pp])
-                    var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
+                    var = cal_var(dv,dm,np.logical_not(dw))+1e-7
                     nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)/var*dw,axis=0)
                     nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)/var*dw,axis=0)
                     den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
-                fqflag = np.where(den==0)
-                den[fqflag] = 1e-7
-                g3[p][a1] = nur/den + 1.j*nui/den
+                zeros = np.where(den==0)
+                den[zeros] = 1.
+                nur[zeros] = 0.
+                nui[zeros] = 0.
+                g3[p][a1] = (nur/den + 1.j*nui/den)*gt[p][a1]
     
             #degen parameter cal
             etan,etad = 0,0
@@ -680,7 +689,7 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
                         except(KeyError):
                             dm = mvis[bl[::-1]][pp].conj()*(gt[p][a1]*gt[p][a2].conj())
                             dw = np.logical_not(mwgt[bl[::-1]][pp])
-                        var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
+                        var = cal_var(dv,dm,np.logical_not(dw))+1e-7
                         etan += np.nansum((dv.real*dm.real+dv.imag*dm.imag-dm.real*dm.real-dm.imag*dm.imag)/var*dw,axis=0)
                         etad += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
                         dx = (realpos[a2]['top_x']-realpos[ref_antenna]['top_x'])/100.
@@ -712,7 +721,7 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
                         except(KeyError):
                             dm = mvis[bl[::-1]][pp].conj()*(gt[p][a1]*gt[p][a2].conj())
                             dw = np.logical_not(mwgt[bl[::-1]][pp])
-                        var = np.var(np.ma.masked_array(dv,mask=np.logical_not(dw),fill_value=0.+0.j),axis=0).data+1e-7
+                        var = cal_var(dv,dm,np.logical_not(dw))+1e-7
                         etan += np.nansum(2*(dv.real*dm.real+dv.imag*dm.imag-dm.real*dm.real-dm.imag*dm.imag)/var*dw,axis=0)
                         etad += np.nansum(4*(dm.real*dm.real+dm.imag*dm.imag)/var*dw,axis=0)
                         dx = (realpos[a1]['top_x']-realpos[a2]['top_x'])/100.
