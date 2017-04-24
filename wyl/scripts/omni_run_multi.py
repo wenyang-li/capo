@@ -458,6 +458,10 @@ for f,filename in enumerate(args):
             for a in opts.ba.split(','):
                 if not int(a) in infodict[p]['ex_ants']:
                     infodict[p]['ex_ants'].append(int(a))
+        if opts.projdegen or opts.fitdegen or opts.cal_all == 'model' or opts.cal_all == 'copy':
+            for a in gfhd[p[0]].keys():
+                if np.isnan(np.mean(gfhd[p[0]][a])):
+                    if not a in infodict[p]['ex_ants']: infodict[p]['ex_ants'].append(a)
         if opts.ex_dipole:
             metafits_path = opts.metafits + filename + '.metafits'
             if os.path.exists(metafits_path):
