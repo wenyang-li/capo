@@ -621,9 +621,9 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
                 except(KeyError):
                     dm = mvis[bl[::-1]][pp].conj()*(g2[p][a2].conj())
                     dw = np.logical_not(mwgt[bl[::-1]][pp])
-                nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)/dw,axis=0)
-                nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)/dw,axis=0)
-                den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)/dw,axis=0)
+                nur += np.nansum((dv.real*dm.real+dv.imag*dm.imag)*dw,axis=0)
+                nui += np.nansum((dv.imag*dm.real-dv.real*dm.imag)*dw,axis=0)
+                den += np.nansum((dm.real*dm.real+dm.imag*dm.imag)*dw,axis=0)
             if np.nansum(den) == 0: continue
             zeros = np.where(den==0)
             den[zeros] = 1.
@@ -631,7 +631,7 @@ def absoulte_cal(data,g2,model_dict,realpos,ref_antenna,ex_ants=[],maxiter=50):
             nui[zeros] = 0.
             gt[p][a1] = nur/den + 1.j*nui/den
         for a2 in g2[p].keys():
-            gt[p][a2] = copy.copy(g2[p][a])
+            gt[p][a2] = copy.copy(g2[p][a2])
         for iter in range(maxiter):
             conv = 0
             #non-hex cal
