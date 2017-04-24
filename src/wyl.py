@@ -588,10 +588,8 @@ def linproj(omni,fhd,realpos,maxiter=50,conv=1e-6):
     return proj
 
 def cal_var_wgt(v,m,w):
-    dv = np.ma.masked_array(v,mask=w,fill_value=0.+0.j)
-    dm = np.ma.masked_array(m,mask=w,fill_value=0.+0.j)
-    da = -(dv-np.mean(dv,axis=0))*(dm-np.mean(dm,axis=0))
-    var = np.var(dv,axis=0).data+np.var(dm,axis=0).data+2*np.mean(da,axis=0).data
+    n = np.ma.masked_array(v-m,mask=w,fill_value=0.+0.j)
+    var = np.var(n,axis=0).data
     zeros = np.where(var==0)
     var[zeros] = 1.
     inv = 1./var
