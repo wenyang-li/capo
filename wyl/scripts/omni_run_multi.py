@@ -62,6 +62,8 @@ o.add_option('--sigma_tol', dest='sigma_tol', default=2.0, type='float',
              help='The tolerance of excluding bad vis data in diagnostic')
 o.add_option('--snr', dest='snr', default=0.5, type='float',
              help='The tolerance of SNR for excluding bad red gp in diagnostic')
+o.add_option('--infoptf',dest='infoptf',default=False, action='store_true',
+             help='generate redundant info per time per freq to support flag array, need tave off')
 opts,args = o.parse_args(sys.argv[1:])
 
 #Dictionary of calpar gains and files
@@ -333,10 +335,42 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
     for bl in f:
         i,j = bl
         wgts[p][(j,i)] = wgts[p][(i,j)] = np.logical_not(f[bl][p]).astype(np.int)
-    print '   Logcal-ing' 
-    m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen) #SAK CHANGE REMOVEDEGEN
-    print '   Lincal-ing'
-    m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
+    if opts.infoptf and not opts.tave:
+        bl0 = data.keys()[0]
+        SH = data[bl0][p].shape
+        Nt,Nf = SH
+        m2,g2,v2 = {},{p[0]:{}},{p:{}}
+        print '   Cal using info per time per frequency'
+        for tt in range(Nt):
+            for ff in range(Nf):
+                flg_bls = []
+                pdata,pg0 = {},{p[0]:{}}
+                for a in g0[p[0]].keys(): pg0[p[0]][a] = np.complex64(g0[p[0]][a][tt][ff]).reshape((1,1))
+                for bl in data.keys():
+                    if f[bl][p][tt][ff]: flg_bls.append(bl)
+                    else:
+                        pdata[bl] = {}
+                        pdata[bl][p] = np.complex64(data[bl][p]).reshape((1,1))
+                r = capo.omni.cal_reds_from_pos(antpos,ex_bls=infodict['ex_bls']+flg_bls)
+                if len(r) == 0: continue
+                else:
+                    pinfo = capo.omni.pos_to_info(antpos, pols=list(set(''.join([p]))), filter_length=filter_length, ex_ants=ex_ants, ex_bls=infodict['ex_bls']+flg_bls, crosspols=[p])
+                    pm1,pg1,pv1 = capo.omni.redcal(pdata,pinfo,gains=pg0, removedegen=opts.removedegen)
+                    pm2,pg2,pv2 = capo.omni.redcal(pdata,pinfo,gains=pg1, removedegen=opts.removedegen)
+                    for a in pg2[p[0]].keys():
+                        if not g2[p[0]].has_key(a): g2[p[0]][a] = np.zeros(SH,dtype=np.complex)
+                        g2[p[0]][a][tt][ff] = pg2[p[0]][a][0][0]
+                    for bl in pv2[p].keys():
+                        if not v2[p].has_key(bl): v2[p][bl] = np.zeros(SH,dtype=np.complex)
+                        v2[p][bl][tt][ff] = pv2[p][bl][0][0]
+                    for key in pm2.keys():
+                        if not m2.has_key(key): m2[key] = np.zeros(SH,dtype=np.complex)
+                        m2[key][tt][ff] = pm2[key][0][0]
+    else:
+        print '   Logcal-ing'
+        m1,g1,v1 = capo.omni.redcal(data,info,gains=g0, removedegen=opts.removedegen) #SAK CHANGE REMOVEDEGEN
+        print '   Lincal-ing'
+        m2,g2,v2 = capo.omni.redcal(data, info, gains=g1, vis=v1, uselogcal=False, removedegen=opts.removedegen)
     if opts.wgt_cal:
         if opts.divauto:
             for a in g2[p[0]].keys():
@@ -376,7 +410,7 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             v2[p][bl][fuse] /= degenij[fuse]
             v2[p][bl][fnot] *= 0
     #compute chi-square
-    if not opts.tave:
+    if not opts.tave and not opts.infoptf:
         print '   compute chi-square'
         chisq = 0
         for r in reds:
@@ -394,6 +428,13 @@ def calibration(infodict):#dict=[filename, g0, timeinfo, d, f, ginfo, freqs, pol
             g2[p[0]][a] = np.resize(g2[p[0]][a],(ginfo[2]))
             stack_mask = np.sum(np.logical_not(mask_arr),axis=0).astype(bool)
             g2[p[0]][a] *= stack_mask
+        elif opts.infoptf:
+            for a in g2[p[0]].keys():
+                mask = np.zeros(SH,dtype=bool)
+                zeros = np.where(g2[p[0]][a]==0)
+                mask[zeros] = True
+                gtemp = np.ma.masked_array(g2[p[0]][a],mask=mask,fill_value=0.+0.j)
+                g2[p[0]][a] = np.mean(gtemp,axis=0).data
         else:
             chi = m2['chisq']
             chi_mask = np.zeros(chi.shape,dtype=bool)
