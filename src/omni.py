@@ -109,7 +109,7 @@ def aa_to_info(aa, pols=['x'], fcal=False, **kwargs):
     return info
 
 #generate info from perfect positions
-def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, ex_bls=[], **kwargs):
+def pos_to_info(position, pols=['x'], fcal=False, **kwargs):
 ### the position is a dictionary, containing only antennas involved in redundant groups.    ###
 ### position dict should have keys of ant inds, with values of ideal positions, and cable   ###
 ### lengths, and a key named 'nant', indicate the number of total antennas across the array ###
@@ -134,17 +134,6 @@ def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, ex_bls=[],
             antpos[i.val,0],antpos[i.val,1],antpos[i.val,2] = x,y,z
 #            redinfo[i,0],redinfo[i,1],redinfo[i,2] = x,y,cable*z
     reds = compute_reds(nant, pols, antpos[:nant],tol=0.01)
-    ubls = None
-    if not filter_length == None:
-        ubls = []
-        for r in reds:
-            bli = int(r[0][0])
-            blj = int(r[0][1])
-            length = np.linalg.norm(antpos[blj]-antpos[bli])
-            if length < filter_length: ubls.append((bli,blj))
-        kwargs['ubls'] = kwargs.get('ubls',[]) + ubls
-    if len(ex_bls) > 0:
-        kwargs['ex_bls'] = kwargs.get('ex_bls',[]) + ex_bls
     ex_ants = [Antpol(i,nant).ant() for i in range(antpos.shape[0]) if antpos[i,0] < 0]
     kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + ex_ants
     reds = filter_reds(reds, **kwargs)
@@ -156,7 +145,7 @@ def pos_to_info(position, pols=['x'], fcal=False, filter_length=None, ex_bls=[],
     return info
 
 
-def cal_reds_from_pos(position,ex_ants=[],ex_bls=[]):
+def cal_reds_from_pos(position,**kwargs):
     nant = position['nant']
     antpos = -np.ones((nant,3))
     xmin = 0
@@ -174,8 +163,8 @@ def cal_reds_from_pos(position,ex_ants=[],ex_bls=[]):
         i = ant
         antpos[i,0],antpos[i,1],antpos[i,2] = x,y,z
     reds = omnical.arrayinfo.compute_reds(antpos,tol=0.01)
-    ex_ants = ex_ants + [i for i in range(antpos.shape[0]) if antpos[i,0] < 0]
-    reds = omnical.arrayinfo.filter_reds(reds,ex_ants=ex_ants,ex_bls=ex_bls)
+    kwargs['ex_ants'] = kwargs.get('ex_ants',[]) + [i for i in range(antpos.shape[0]) if antpos[i,0] < 0]
+    reds = omnical.arrayinfo.filter_reds(reds,**kwargs)
     return reds
 
 

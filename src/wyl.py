@@ -387,7 +387,7 @@ def mwa_bandpass_fit(gains, auto, tile_info, amp_order=2, phs_order=1, fit_refle
                 vf = tile_info[ant]['vf']
                 t0 = 2*cable/299792458.0/vf*1e6
                 rp[x] = y2 - polyfunc(x,z2)
-                tau = np.fft.fftfreq(384,(fqs[-1]-fqs[0])/384)
+                tau = np.fft.fftfreq(384,(fqs[-1]-fqs[0])/383)
                 fftrp = np.fft.fft(rp,n=384)
                 inds = np.where(abs(np.abs(tau)-t0)<0.05)
                 imax = np.argmax(np.abs(fftrp[inds]))
